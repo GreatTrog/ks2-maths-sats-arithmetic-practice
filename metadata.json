@@ -1,0 +1,5 @@
+{
+  "name": "KS2 Maths SATs Arithmetic Practice",
+  "description": "An adaptive learning app for KS2 arithmetic questions. Users are presented with SATs-style problems. If they answer correctly, they move to a new topic. If incorrect, they receive guided practice on that topic until they master it.",
+  "requestFramePermissions": []
+}
