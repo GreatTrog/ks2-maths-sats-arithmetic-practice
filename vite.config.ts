@@ -4,7 +4,12 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
+    const repoName = 'ks2-maths-sats-arithmetic-practice';
+    const base =
+      env.VITE_BASE_PATH ||
+      (mode === 'production' ? `/${repoName}/` : '/');
     return {
+      base,
       server: {
         port: 3000,
         host: '0.0.0.0',
