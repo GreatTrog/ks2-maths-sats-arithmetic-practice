@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Question, QuestionType, PracticeState } from './types';
 import { generateNewQuestion, generateQuestionByType, questionTypes } from './services/questionService';
 import { getBakedExplanation } from './services/explanationService';
@@ -81,6 +81,21 @@ const PracticeTracker: React.FC<{ count: number }> = ({ count }) => (
     ))}
   </div>
 );
+
+const formatCountdown = (totalSeconds: number) => {
+  const safeSeconds = Math.max(0, totalSeconds);
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+  const paddedSeconds = seconds.toString().padStart(2, '0');
+  return minutes > 0 ? `${minutes}:${paddedSeconds}` : `${seconds}s`;
+};
+
+const practiceTimerOptions = [
+  { label: 'No timer', seconds: 0 },
+  { label: '30s', seconds: 30 },
+  { label: '1 min', seconds: 60 },
+  { label: '2 mins', seconds: 120 },
+];
 
 // Helper function to strip markdown for cleaner speech
 const sanitizeForSpeech = (text: string): string => {
@@ -271,12 +286,15 @@ const QuestionDisplay: React.FC<{ question: Question }> = ({ question }) => {
 export default function App() {
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [userAnswer, setUserAnswer] = useState('');
-  const [feedback, setFeedback] = useState<'correct' | 'incorrect' | 'hidden'>('hidden');
+  const [feedback, setFeedback] = useState<'correct' | 'incorrect' | 'timeout' | 'hidden'>('hidden');
   const [practiceState, setPracticeState] = useState<PracticeState | null>(null);
   const [isAnswering, setIsAnswering] = useState(true);
   const [explanation, setExplanation] = useState<string[] | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<QuestionType | 'All'>('All');
   const [britishVoice, setBritishVoice] = useState<SpeechSynthesisVoice | null>(null);
+  const [practiceTimerSeconds, setPracticeTimerSeconds] = useState(0);
+  const [secondsRemaining, setSecondsRemaining] = useState(0);
+  const timeUpTransitionRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const loadVoices = () => {
@@ -302,7 +320,15 @@ export default function App() {
     };
   }, []);
 
-  const speakText = (text: string) => {
+  useEffect(() => {
+    return () => {
+      if (timeUpTransitionRef.current) {
+        clearTimeout(timeUpTransitionRef.current);
+      }
+    };
+  }, []);
+
+  const speakText = useCallback((text: string) => {
     if (!('speechSynthesis' in window) || !text) return;
 
     // Cancel any ongoing speech to prevent overlap
@@ -318,7 +344,7 @@ export default function App() {
     utterance.rate = 1;
     
     window.speechSynthesis.speak(utterance);
-  };
+  }, [britishVoice]);
 
   const resetForNewQuestion = (question: Question) => {
     setCurrentQuestion(question);
@@ -340,6 +366,25 @@ export default function App() {
     }
   }, [practiceState]);
 
+  const handleTimerExpire = useCallback(() => {
+    if (!currentQuestion) return;
+
+    setFeedback('timeout');
+    setIsAnswering(false);
+    setExplanation(null);
+    setPracticeState({ type: currentQuestion.type, correctInARow: 0 });
+    setSelectedTopic(currentQuestion.type);
+    setSecondsRemaining(0);
+    speakText("Time's up! Keep calm and try again.");
+
+    if (timeUpTransitionRef.current) {
+      clearTimeout(timeUpTransitionRef.current);
+    }
+    timeUpTransitionRef.current = setTimeout(() => {
+      startPracticeQuestion();
+    }, 1500);
+  }, [currentQuestion, startPracticeQuestion, speakText]);
+
   useEffect(() => {
     if (selectedTopic === 'All') {
         startNewQuestion();
@@ -359,6 +404,27 @@ export default function App() {
         setPracticeState(null);
     }
   };
+
+  useEffect(() => {
+    if (practiceTimerSeconds <= 0 || !practiceState || !currentQuestion || !isAnswering) {
+      setSecondsRemaining(practiceTimerSeconds);
+      return;
+    }
+
+    setSecondsRemaining(practiceTimerSeconds);
+    const intervalId = setInterval(() => {
+      setSecondsRemaining((prevSeconds) => {
+        if (prevSeconds <= 1) {
+          clearInterval(intervalId);
+          handleTimerExpire();
+          return 0;
+        }
+        return prevSeconds - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [practiceTimerSeconds, practiceState, currentQuestion, isAnswering, handleTimerExpire]);
 
 
   const handleCheckAnswer = () => {
@@ -444,6 +510,32 @@ export default function App() {
             <h3 className="text-lg font-semibold text-blue-800 text-center mb-2">Practice Zone: {practiceState.type}</h3>
             <PracticeTracker count={practiceState.correctInARow} />
             <p className="text-center text-sm text-blue-700 mt-2">Get 3 in a row correct to move to a new topic!</p>
+            <div className="mt-4 text-center">
+              <p className="text-sm font-medium text-blue-700 mb-2">Timer per question</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {practiceTimerOptions.map((option) => (
+                  <button
+                    key={`timer-${option.seconds}`}
+                    onClick={() => {
+                      setPracticeTimerSeconds(option.seconds);
+                      setSecondsRemaining(option.seconds);
+                    }}
+                    className={`px-3 py-1 rounded-full border text-sm font-semibold transition-colors duration-200 ${
+                      practiceTimerSeconds === option.seconds
+                        ? 'bg-blue-600 border-blue-700 text-white'
+                        : 'bg-white border-blue-200 text-blue-700 hover:border-blue-400'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              {practiceTimerSeconds > 0 && currentQuestion && (
+                <div className="mt-3 text-2xl font-bold text-blue-800">
+                  Time left: {formatCountdown(secondsRemaining)}
+                </div>
+              )}
+            </div>
           </div>
       )}
 
@@ -465,7 +557,8 @@ export default function App() {
                 className={`w-full p-4 text-2xl border-2 rounded-lg text-center transition-all duration-300 focus:ring-2 bg-white text-gray-800 placeholder:text-gray-400
                   ${feedback === 'hidden' ? 'border-gray-300 focus:border-blue-500 focus:ring-blue-300' : ''}
                   ${feedback === 'correct' ? 'border-green-500 bg-green-50 focus:ring-green-300' : ''}
-                  ${feedback === 'incorrect' ? 'border-red-500 bg-red-50 focus:ring-red-300' : ''}`}
+                  ${feedback === 'incorrect' ? 'border-red-500 bg-red-50 focus:ring-red-300' : ''}
+                  ${feedback === 'timeout' ? 'border-orange-500 bg-orange-50 focus:ring-orange-300' : ''}`}
                 disabled={!isAnswering}
               />
             </div>
@@ -485,6 +578,15 @@ export default function App() {
                   <CrossIcon /> 
                   <span className="ml-2">Not quite, let's review.</span>
                    <button onClick={() => speakText("Not quite, let's review.")} className="ml-2 text-gray-500 hover:text-blue-600 transition-colors" aria-label="Read feedback aloud">
+                    <SpeakerIcon />
+                  </button>
+                </div>
+              )}
+              {feedback === 'timeout' && (
+                <div className="flex items-center text-orange-600 font-bold">
+                  <CrossIcon />
+                  <span className="ml-2">Time's up! Keep calm and try again.</span>
+                  <button onClick={() => speakText("Time's up! Keep calm and try again.")} className="ml-2 text-gray-500 hover:text-blue-600 transition-colors" aria-label="Read timeout feedback aloud">
                     <SpeakerIcon />
                   </button>
                 </div>
