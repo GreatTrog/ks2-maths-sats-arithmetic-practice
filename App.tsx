@@ -5,6 +5,7 @@ import { generateQuestionByType, generateNewQuestion } from './services/question
 import { getBakedExplanation } from './services/explanationService';
 import AdditionVisualizer from './components/visualizers/AdditionVisualizer';
 import SubtractionVisualizer from './components/visualizers/SubtractionVisualizer';
+import ShortMultiplicationVisualizer from './components/visualizers/ShortMultiplicationVisualizer';
 
 // --- Icons ---
 const CheckIcon = () => (
@@ -199,6 +200,9 @@ const StepByStepGuidancePanel: React.FC<{
             )}
             {(question.type === QuestionType.Subtraction || question.type === QuestionType.SubtractionWithRegrouping) && (
               <SubtractionVisualizer question={question} stepIndex={stepIndex} />
+            )}
+            {question.type === QuestionType.Multiplication && (
+              <ShortMultiplicationVisualizer question={question} stepIndex={stepIndex} />
             )}
           </div>
         </div>
