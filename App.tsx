@@ -197,7 +197,7 @@ const StepByStepGuidancePanel: React.FC<{
             {question.type === QuestionType.Addition && (
               <AdditionVisualizer question={question} stepIndex={stepIndex} />
             )}
-            {question.type === QuestionType.Subtraction && (
+            {(question.type === QuestionType.Subtraction || question.type === QuestionType.SubtractionWithRegrouping) && (
               <SubtractionVisualizer question={question} stepIndex={stepIndex} />
             )}
           </div>
