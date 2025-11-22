@@ -1,339 +1,283 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Question, QuestionType, PracticeState } from './types';
-import { generateNewQuestion, generateQuestionByType, questionTypes } from './services/questionService';
+import { createRoot } from 'react-dom/client';
+import { Question, QuestionType } from './types';
+import { generateQuestionByType, generateNewQuestion } from './services/questionService';
 import { getBakedExplanation } from './services/explanationService';
 import AdditionVisualizer from './components/visualizers/AdditionVisualizer';
+import SubtractionVisualizer from './components/visualizers/SubtractionVisualizer';
 
+// --- Icons ---
 const CheckIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-500" viewBox="0 0 20 20" fill="currentColor">
-    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
   </svg>
 );
 
 const CrossIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-  </svg>
-);
-
-const StarIcon = ({ filled }: { filled: boolean }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={`h-8 w-8 transition-all duration-300 ${filled ? 'text-yellow-400 scale-110' : 'text-gray-300'}`} viewBox="0 0 20 20" fill="currentColor">
-    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
   </svg>
 );
 
 const SpeakerIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
   </svg>
 );
 
-// Helper function to parse a fraction string (e.g., "3/4", "5", "1 1/2") into a numeric representation.
-const parseFraction = (fractionStr: string): { num: number, den: number } | null => {
-  const trimmed = fractionStr.trim();
-  const parts = trimmed.split(/\s+/).filter(Boolean); // Split by space and remove empty strings
+const StarIcon = ({ filled }: { filled: boolean }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={`h-8 w-8 transition-all duration-300 ${filled ? 'text-yellow-400 fill-current scale-110' : 'text-gray-300 scale-100'}`} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={filled ? 0 : 2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+  </svg>
+);
 
-  let whole = 0;
-  let fracPart = '';
-
-  if (parts.length === 2) {
-    // Potentially a mixed number like "1 1/2"
-    if (!parts[1].includes('/')) return null; // must have a fraction part
-    whole = parseInt(parts[0], 10);
-    fracPart = parts[1];
-    if (isNaN(whole)) return null;
-  } else if (parts.length === 1) {
-    fracPart = parts[0];
-  } else if (parts.length > 2) {
-    return null; // Invalid format
-  }
-
-  if (fracPart.includes('/')) {
-    const fracParts = fracPart.split('/');
-    if (fracParts.length !== 2) return null;
-    let num = parseInt(fracParts[0], 10);
-    let den = parseInt(fracParts[1], 10);
-    if (isNaN(num) || isNaN(den) || den === 0) return null;
-    num = (whole * den) + num;
-    return { num, den };
-  } else {
-    // Handle whole numbers
-    const num = parseInt(fracPart, 10);
-    if (isNaN(num)) return null;
-    return { num: whole + num, den: 1 };
-  }
-};
-
-// Helper function to check if two fraction strings are mathematically equivalent.
-const areFractionsEquivalent = (userAnswer: string, correctAnswer: string): boolean => {
-  const userFrac = parseFraction(userAnswer);
-  const correctFrac = parseFraction(correctAnswer);
-
-  if (!userFrac || !correctFrac) {
-    return false; // Invalid format
-  }
-
-  // Use cross-multiplication to check for equivalence (n1/d1 === n2/d2  =>  n1 * d2 === n2 * d1)
-  return userFrac.num * correctFrac.den === correctFrac.num * userFrac.den;
-};
-
+// --- Helper Components ---
 
 const PracticeTracker: React.FC<{ count: number }> = ({ count }) => (
-  <div className="flex space-x-3 justify-center p-2 bg-white/50 rounded-full backdrop-blur-sm">
+  <div className="flex space-x-3 justify-center mb-4">
     {[1, 2, 3].map((i) => (
-      <div key={i} className="transform transition-all duration-300 hover:scale-110">
+      <div key={i} className="transform transition-transform hover:scale-110">
         <StarIcon filled={i <= count} />
       </div>
     ))}
   </div>
 );
 
-const formatCountdown = (totalSeconds: number) => {
-  const safeSeconds = Math.max(0, totalSeconds);
-  const minutes = Math.floor(safeSeconds / 60);
-  const seconds = safeSeconds % 60;
-  const paddedSeconds = seconds.toString().padStart(2, '0');
-  return minutes > 0 ? `${minutes}:${paddedSeconds}` : `${seconds}s`;
+const QuestionDisplay: React.FC<{ question: Question }> = ({ question }) => {
+  return (
+    <div className="text-center">
+      <div className="text-5xl md:text-7xl font-black text-gray-800 tracking-tight mb-4 font-mono">
+        {question.text}
+      </div>
+      {question.type.includes('Fraction') && (
+        <div className="text-gray-500 text-lg italic">
+          (Enter fractions like 1/2 or 1 1/2)
+        </div>
+      )}
+    </div>
+  );
 };
 
-const practiceTimerOptions = [
-  { label: 'No timer', seconds: 0 },
-  { label: '30s', seconds: 30 },
-  { label: '1 min', seconds: 60 },
-  { label: '2 mins', seconds: 120 },
-];
-
-// Helper function to strip markdown for cleaner speech
-const sanitizeForSpeech = (text: string): string => {
-  return text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/_/g, '');
+const FormattedText: React.FC<{ text: string }> = ({ text }) => {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return (
+    <span>
+      {parts.map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          return <strong key={i} className="font-bold text-primary">{part.slice(2, -2)}</strong>;
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </span>
+  );
 };
 
-interface StepByStepGuidancePanelProps {
-  steps: string[];
-  onContinue: () => void;
-  speakText: (text: string) => void;
-  question: Question;
-}
-
-const StepByStepGuidancePanel: React.FC<StepByStepGuidancePanelProps> = ({ steps, onContinue, speakText, question }) => {
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [showAll, setShowAll] = useState(false);
+const StepByStepGuidancePanel: React.FC<{
+  steps: string[],
+  onContinue: () => void,
+  speakText: (text: string) => void,
+  question: Question
+}> = ({ steps, onContinue, speakText, question }) => {
+  const [stepIndex, setStepIndex] = useState(0);
+  const [showAllSteps, setShowAllSteps] = useState(false);
 
   const handleNextStep = () => {
-    if (currentStepIndex < steps.length - 1) {
-      setCurrentStepIndex(currentStepIndex + 1);
+    if (stepIndex < steps.length - 1) {
+      setStepIndex(stepIndex + 1);
     }
   };
 
-  const handleShowAll = () => {
-    setShowAll(true);
+  const handlePrevStep = () => {
+    if (stepIndex > 0) {
+      setStepIndex(stepIndex - 1);
+    }
   };
 
-  const formatStep = (step: string) => {
-    return step
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')         // Italic
-      .replace(/\n/g, '<br />');
-  };
+  return (
+    <div className="mt-6 bg-white/90 backdrop-blur-sm p-6 rounded-2xl shadow-xl border-2 border-primary/20 animate-fade-in-up w-full max-w-4xl">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xl font-bold text-primary flex items-center gap-2">
+          <span>💡</span> Let's solve it together!
+        </h3>
+        {!showAllSteps && (
+          <div className="text-sm font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+            Step {stepIndex + 1} of {steps.length}
+          </div>
+        )}
+      </div>
 
-  const formattedContent = (content: string) => ({ __html: formatStep(content) });
-
-  if (showAll) {
-    return (
-      <div className="w-full max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow-xl border-4 border-secondary animate-fade-in">
-        <h3 className="text-2xl font-bold text-gray-800 mb-4">All Steps</h3>
-        <div className="prose max-w-none text-gray-700 space-y-4">
-          {steps.map((step, index) => (
-            <div key={index}>
-              <div className="flex items-center gap-2">
-                <p className="font-bold">Step {index + 1}:</p>
-                <button onClick={() => speakText(step)} className="text-gray-400 hover:text-primary transition-colors transform hover:scale-110" aria-label={`Read step ${index + 1} aloud`}>
+      {showAllSteps ? (
+        <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+          {steps.map((step, idx) => (
+            <div key={idx} className="flex gap-3">
+              <div className="flex-shrink-0 w-8 h-8 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold text-sm">
+                {idx + 1}
+              </div>
+              <div className="text-lg text-gray-700 font-medium leading-relaxed">
+                <FormattedText text={step} />
+                <button
+                  onClick={() => speakText(step)}
+                  className="ml-2 inline-block text-gray-400 hover:text-primary transition-colors align-middle"
+                  title="Read step"
+                >
                   <SpeakerIcon />
                 </button>
               </div>
-              <div dangerouslySetInnerHTML={formattedContent(step)} />
             </div>
           ))}
-        </div>
-        <button
-          onClick={onContinue}
-          className="mt-6 w-full bg-secondary hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1"
-        >
-          Got it! Let's Practice
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="w-full max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow-xl border-4 border-secondary animate-fade-in">
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h3 className="text-2xl font-bold text-gray-800 mb-2">Let's break it down... 🧐</h3>
-          <p className="text-gray-600 font-medium">Step {currentStepIndex + 1} of {steps.length}</p>
-        </div>
-        <button onClick={() => speakText(steps[currentStepIndex])} className="text-gray-400 hover:text-primary transition-colors transform hover:scale-110" aria-label={`Read step ${currentStepIndex + 1} aloud`}>
-          <SpeakerIcon />
-        </button>
-      </div>
-
-      <div className="flex flex-col md:flex-row gap-6">
-        <div className="flex-1 prose max-w-none text-gray-700 min-h-[120px] text-lg bg-blue-50 p-4 rounded-xl border border-blue-100" dangerouslySetInnerHTML={formattedContent(steps[currentStepIndex])} />
-
-        {question.type === QuestionType.Addition && (
-          <div className="flex-1 flex justify-center items-center">
-            <AdditionVisualizer question={question} stepIndex={currentStepIndex} />
+          <div className="pt-4 text-center">
+            <button
+              onClick={() => setShowAllSteps(false)}
+              className="text-primary font-bold hover:underline"
+            >
+              Show Step-by-Step View
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Text Explanation */}
+          <div className="flex-1 space-y-4">
+            <div className="text-lg text-gray-700 font-medium leading-relaxed flex items-start gap-2">
+              <div className="flex-1">
+                <FormattedText text={steps[stepIndex]} />
+              </div>
+              <button
+                onClick={() => speakText(steps[stepIndex])}
+                className="flex-shrink-0 text-gray-400 hover:text-primary transition-colors mt-1"
+                title="Read step"
+              >
+                <SpeakerIcon />
+              </button>
+            </div>
 
-      <div className="mt-6 space-y-3">
-        {currentStepIndex < steps.length - 1 ? (
-          <button
-            onClick={handleNextStep}
-            className="w-full bg-primary hover:bg-indigo-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1"
-          >
-            Next Step ➡️
-          </button>
-        ) : (
-          <button
-            onClick={handleShowAll}
-            className="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
-          >
-            Show All Steps 📝
-          </button>
-        )}
-        <button
-          onClick={onContinue}
-          className="w-full bg-secondary hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1"
-        >
-          I'm Ready for the Next Question! 🚀
-        </button>
-      </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={handlePrevStep}
+                disabled={stepIndex === 0}
+                className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2
+                          ${stepIndex === 0
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white border-2 border-gray-200 text-gray-600 hover:border-primary hover:text-primary hover:shadow-md'
+                  }`}
+              >
+                <span>←</span> Back
+              </button>
+              <button
+                onClick={handleNextStep}
+                disabled={stepIndex === steps.length - 1}
+                className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5
+                          ${stepIndex === steps.length - 1
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-primary text-white'
+                  }`}
+              >
+                Next Step →
+              </button>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setShowAllSteps(true)}
+                className="flex-1 py-2 px-4 rounded-xl font-bold text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+              >
+                View All Steps
+              </button>
+              <button
+                onClick={onContinue}
+                className="flex-1 py-2 px-4 rounded-xl font-bold text-sm bg-green-500 text-white hover:bg-green-600 transition-colors shadow-md hover:shadow-lg"
+              >
+                Ready to Practice! 🚀
+              </button>
+            </div>
+          </div>
+
+          {/* Visualizer */}
+          <div className="flex-shrink-0 flex justify-center md:justify-end">
+            {question.type === QuestionType.Addition && (
+              <AdditionVisualizer question={question} stepIndex={stepIndex} />
+            )}
+            {question.type === QuestionType.Subtraction && (
+              <SubtractionVisualizer question={question} stepIndex={stepIndex} />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
+// --- Main App Component ---
 
-const Fraction: React.FC<{ value: string }> = ({ value }) => {
-  // Handle mixed numbers
-  const mixedParts = value.split(' ');
-  if (mixedParts.length === 2 && mixedParts[1].includes('/')) {
-    return (
-      <div className="inline-flex items-center space-x-2">
-        <span className="font-mono text-5xl">{mixedParts[0]}</span>
-        <Fraction value={mixedParts[1]} />
-      </div>
-    );
-  }
+const questionTypes = Object.values(QuestionType);
 
-  // Handle simple fractions
-  const parts = value.split('/');
-  if (parts.length === 2) {
-    return (
-      <div className="inline-flex flex-col items-center font-mono text-5xl leading-none">
-        <span>{parts[0]}</span>
-        <span className="w-full border-t-2 border-black my-1"></span>
-        <span>{parts[1]}</span>
-      </div>
-    );
-  }
-
-  // For whole numbers in fraction questions (e.g., division)
-  return <span className="font-mono text-5xl">{value}</span>;
+// Helper to check fraction equivalence (simplified)
+const areFractionsEquivalent = (ans1: string, ans2: string): boolean => {
+  // Very basic check, ideally would parse and compare values
+  // For now, strip spaces and compare
+  return ans1.replace(/\s/g, '') === ans2.replace(/\s/g, '');
 };
 
-
-const QuestionDisplay: React.FC<{ question: Question }> = ({ question }) => {
-  const fractionTypes = [
-    QuestionType.FractionAdditionSimpleDenominators,
-    QuestionType.FractionAdditionUnlikeDenominators,
-    QuestionType.FractionAdditionMixedNumbers,
-    QuestionType.FractionSubtractionSimpleDenominators,
-    QuestionType.FractionSubtractionUnlikeDenominators,
-    QuestionType.FractionSubtractionMixedNumbers,
-    QuestionType.FractionMultiplication,
-    QuestionType.FractionMultiplicationMixedNumbers,
-    QuestionType.FractionDivision,
-  ];
-
-  if (question.type === QuestionType.LongMultiplication && question.operands) {
-    return (
-      <div className="flex justify-center my-4">
-        <div className="inline-flex flex-col items-end font-mono text-5xl text-gray-800">
-          <span>{question.operands[0]}</span>
-          <div className="flex items-center">
-            <span className="mr-4">{question.operator}</span>
-            <span>{question.operands[1]}</span>
-          </div>
-          <div className="w-full border-t-2 border-black mt-2"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (fractionTypes.includes(question.type) && question.operands && question.operator) {
-    return (
-      <div className="flex justify-center items-center my-8 space-x-6 text-gray-800">
-        <Fraction value={question.operands[0]} />
-        <span className="font-mono text-5xl">{question.operator}</span>
-        <Fraction value={question.operands[1]} />
-        <span className="font-mono text-5xl">=</span>
-      </div>
-    );
-  }
-
-  const getQuestionFontSize = (text: string | undefined) => {
-    if (!text) return 'text-4xl';
-    if (text.length > 25) return 'text-3xl';
-    if (text.includes('│')) return 'text-5xl'; // long division
-    return 'text-5xl';
-  }
-
-  return (
-    <div className={`text-center text-gray-800 font-mono whitespace-pre-line ${getQuestionFontSize(question.text)}`}>
-      {question.text.replace(/_/g, '___')}
-    </div>
-  );
+// Helper for speech
+const sanitizeForSpeech = (text: string) => {
+  return text
+    .replace(/\*\*/g, '') // Remove bold markers
+    .replace(/(\d+)\/(\d+)/g, '$1 over $2') // Fractions
+    .replace(/-/g, ' minus ')
+    .replace(/\+/g, ' plus ')
+    .replace(/=/g, ' equals ');
 };
 
+// Helper for timer format
+const formatCountdown = (seconds: number) => {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+};
 
 export default function App() {
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [userAnswer, setUserAnswer] = useState('');
-  const [feedback, setFeedback] = useState<'correct' | 'incorrect' | 'timeout' | 'hidden'>('hidden');
-  const [practiceState, setPracticeState] = useState<PracticeState | null>(null);
+  const [feedback, setFeedback] = useState<'hidden' | 'correct' | 'incorrect' | 'timeout'>('hidden');
   const [isAnswering, setIsAnswering] = useState(true);
-  const [explanation, setExplanation] = useState<string[] | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<QuestionType | 'All'>('All');
+  const [explanation, setExplanation] = useState<string[] | null>(null);
+
+  // Practice Mode State
+  const [practiceState, setPracticeState] = useState<{ type: QuestionType, correctInARow: number } | null>(null);
+  const [practiceTimerSeconds, setPracticeTimerSeconds] = useState<number>(0); // 0 means no timer
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(0);
+
+  const practiceTimerOptions = [
+    { label: 'No Timer', seconds: 0 },
+    { label: '30s', seconds: 30 },
+    { label: '1m', seconds: 60 },
+    { label: '2m', seconds: 120 },
+  ];
+
+  // Speech Synthesis
   const [britishVoice, setBritishVoice] = useState<SpeechSynthesisVoice | null>(null);
-  const [practiceTimerSeconds, setPracticeTimerSeconds] = useState(0);
-  const [secondsRemaining, setSecondsRemaining] = useState(0);
-  const timeUpTransitionRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const loadVoices = () => {
-      const allVoices = window.speechSynthesis.getVoices();
-      if (allVoices.length > 0) {
-        // Prioritize a "Google" voice as they often sound more natural
-        const gbVoice = allVoices.find(voice => voice.lang === 'en-GB' && voice.name.includes('Google')) ||
-          allVoices.find(voice => voice.lang === 'en-GB');
-        setBritishVoice(gbVoice || null);
-      }
+      const voices = window.speechSynthesis.getVoices();
+      const gbVoice = voices.find(voice => voice.lang === 'en-GB' && voice.name.includes('Google')) || voices.find(voice => voice.lang === 'en-GB');
+      setBritishVoice(gbVoice || null);
     };
 
-    // Voices are loaded asynchronously. onvoiceschanged is the event to listen for.
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
 
     return () => {
       window.speechSynthesis.onvoiceschanged = null;
-      // Also cancel any speech on component unmount
       if (window.speechSynthesis.speaking) {
         window.speechSynthesis.cancel();
       }
     };
   }, []);
+
+  // Timer transition ref
+  const timeUpTransitionRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     return () => {
@@ -345,19 +289,15 @@ export default function App() {
 
   const speakText = useCallback((text: string) => {
     if (!('speechSynthesis' in window) || !text) return;
-
-    // Cancel any ongoing speech to prevent overlap
     if (window.speechSynthesis.speaking) {
       window.speechSynthesis.cancel();
     }
-
     const utterance = new SpeechSynthesisUtterance(sanitizeForSpeech(text));
     if (britishVoice) {
       utterance.voice = britishVoice;
     }
     utterance.pitch = 1;
     utterance.rate = 1;
-
     window.speechSynthesis.speak(utterance);
   }, [britishVoice]);
 
@@ -378,8 +318,11 @@ export default function App() {
     if (practiceState) {
       const newQ = generateQuestionByType(practiceState.type);
       resetForNewQuestion(newQ);
+    } else {
+      // If no practice state (e.g. All Topics), generate a random new question
+      startNewQuestion();
     }
-  }, [practiceState]);
+  }, [practiceState, startNewQuestion]);
 
   const handleTimerExpire = useCallback(() => {
     if (!currentQuestion) return;
@@ -458,7 +401,6 @@ export default function App() {
     ];
 
     let isCorrect = false;
-    // Sanitize answer by removing commas for place value questions
     const sanitizedUserAnswer = userAnswer.trim().replace(/,/g, '');
     const sanitizedCorrectAnswer = currentQuestion.answer.replace(/,/g, '');
 
@@ -476,20 +418,17 @@ export default function App() {
         const newCount = practiceState.correctInARow + 1;
         if (newCount >= 3) {
           setPracticeState(null);
-          setSelectedTopic('All'); // Go back to random questions
-          // A delay is already built-in before startNewQuestion runs from useEffect
+          setSelectedTopic('All');
         } else {
           setPracticeState({ ...practiceState, correctInARow: newCount });
           setTimeout(startPracticeQuestion, 1500);
         }
       } else {
-        // Correct answer in random mode
         setTimeout(() => startNewQuestion(currentQuestion.type), 1500);
       }
     } else {
-      // Incorrect answer
       setPracticeState({ type: currentQuestion.type, correctInARow: 0 });
-      setSelectedTopic(currentQuestion.type); // Lock into this topic for practice
+      setSelectedTopic(currentQuestion.type);
       const expl = getBakedExplanation(currentQuestion);
       setExplanation(expl);
     }
@@ -541,8 +480,8 @@ export default function App() {
                     setSecondsRemaining(option.seconds);
                   }}
                   className={`px-4 py-2 rounded-full text-sm font-bold transition-all duration-200 transform hover:scale-105 ${practiceTimerSeconds === option.seconds
-                      ? 'bg-primary text-white shadow-lg ring-2 ring-primary ring-offset-2'
-                      : 'bg-white text-gray-600 border-2 border-gray-200 hover:border-primary hover:text-primary'
+                    ? 'bg-primary text-white shadow-lg ring-2 ring-primary ring-offset-2'
+                    : 'bg-white text-gray-600 border-2 border-gray-200 hover:border-primary hover:text-primary'
                     }`}
                 >
                   {option.label}

@@ -1,4 +1,3 @@
-
 import { Question, QuestionType } from '../types';
 
 // Helper Functions
@@ -30,21 +29,21 @@ const createMixedNumber = (): MixedNumber => ({ w: randomInt(1, 4), n: randomInt
 // --- Question Generators ---
 
 const generateAddition = (): Question => {
-  const num1 = randomInt(100, 9999);
-  const num2 = randomInt(100, 9999);
-  const text = Math.random() < 0.5 
-    ? `${num1} + ${num2} =` 
-    : `_ = ${num1} + ${num2}`;
-  return { type: QuestionType.Addition, text, answer: (num1 + num2).toString() };
+    const num1 = randomInt(100, 9999);
+    const num2 = randomInt(100, 9999);
+    const text = Math.random() < 0.5
+        ? `${num1} + ${num2} =`
+        : `_ = ${num1} + ${num2}`;
+    return { type: QuestionType.Addition, text, answer: (num1 + num2).toString() };
 };
 
 const generateSubtraction = (): Question => {
-  const num1 = randomInt(1000, 9999);
-  const num2 = randomInt(100, num1 - 10);
-  const text = Math.random() < 0.5
-    ? `${num1} - ${num2} =`
-    : `_ = ${num1} - ${num2}`;
-  return { type: QuestionType.Subtraction, text, answer: (num1 - num2).toString() };
+    const num1 = randomInt(1000, 9999);
+    const num2 = randomInt(100, num1 - 10);
+    const text = Math.random() < 0.5
+        ? `${num1} - ${num2} =`
+        : `_ = ${num1} - ${num2}`;
+    return { type: QuestionType.Subtraction, text, answer: (num1 - num2).toString() };
 };
 
 const generateSubtractionWithRegrouping = (): Question => {
@@ -54,18 +53,18 @@ const generateSubtractionWithRegrouping = (): Question => {
 };
 
 const generateMultiplication = (): Question => {
-  const num1 = randomInt(10, 99);
-  const num2 = randomInt(2, 9);
-  const text = Math.random() < 0.5
-    ? `${num1} × ${num2} =`
-    : `_ = ${num1} × ${num2}`;
-  return { type: QuestionType.Multiplication, text, answer: (num1 * num2).toString() };
+    const num1 = randomInt(10, 99);
+    const num2 = randomInt(2, 9);
+    const text = Math.random() < 0.5
+        ? `${num1} × ${num2} =`
+        : `_ = ${num1} × ${num2}`;
+    return { type: QuestionType.Multiplication, text, answer: (num1 * num2).toString() };
 };
 
 const generateMultiplication3Numbers = (): Question => {
     const nums = [randomInt(2, 10), randomInt(2, 10), randomInt(0, 10)];
     // shuffle
-    for(let i = nums.length - 1; i > 0; i--) {
+    for (let i = nums.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [nums[i], nums[j]] = [nums[j], nums[i]];
     }
@@ -74,19 +73,19 @@ const generateMultiplication3Numbers = (): Question => {
 };
 
 const generateDivision = (): Question => {
-  const divisor = randomInt(2, 9);
-  const quotient = randomInt(10, 99);
-  const dividend = divisor * quotient;
-  const text = Math.random() < 0.5
-    ? `${dividend} ÷ ${divisor} =`
-    : `_ = ${dividend} ÷ ${divisor}`;
-  return { type: QuestionType.Division, text, answer: quotient.toString() };
+    const divisor = randomInt(2, 9);
+    const quotient = randomInt(10, 99);
+    const dividend = divisor * quotient;
+    const text = Math.random() < 0.5
+        ? `${dividend} ÷ ${divisor} =`
+        : `_ = ${dividend} ÷ ${divisor}`;
+    return { type: QuestionType.Division, text, answer: quotient.toString() };
 };
 
 const generateDivisionWithKnownFacts = (): Question => {
     const fact = randomInt(2, 12);
     const multiple = randomInt(2, 9) * fact;
-    const powerOf10 = 10 ** randomInt(1,3);
+    const powerOf10 = 10 ** randomInt(1, 3);
     const dividend = multiple * powerOf10;
     const answer = (dividend / fact).toString();
     return { type: QuestionType.DivisionWithKnownFacts, text: `${dividend} ÷ ${fact} =`, answer };
@@ -122,10 +121,10 @@ const generateFractionAdditionUnlikeDenominators = (): Question => {
     while (den1 === den2) den2 = randomInt(3, 7);
     const num1 = randomInt(1, den1 - 1);
     const num2 = randomInt(1, den2 - 1);
-    
+
     const resNum = (num1 * den2) + (num2 * den1);
     const resDen = den1 * den2;
-    const answerFrac = simplify({n: resNum, d: resDen});
+    const answerFrac = simplify({ n: resNum, d: resDen });
 
     return {
         type: QuestionType.FractionAdditionUnlikeDenominators,
@@ -139,12 +138,12 @@ const generateFractionAdditionSimpleDenominators = (): Question => {
     const den1 = randomInt(2, 6);
     const multiplier = randomInt(2, 4);
     const den2 = den1 * multiplier;
-    const num1 = randomInt(1, den1 -1);
+    const num1 = randomInt(1, den1 - 1);
     const num2 = randomInt(1, den2 - 1);
 
     const resNum = (num1 * multiplier) + num2;
     const resDen = den2;
-    const answerFrac = simplify({n: resNum, d: resDen});
+    const answerFrac = simplify({ n: resNum, d: resDen });
 
     return {
         type: QuestionType.FractionAdditionSimpleDenominators,
@@ -163,7 +162,7 @@ const generateFractionAdditionMixedNumbers = (): Question => {
 
     const resNum = (imp1.n * imp2.d) + (imp2.n * imp1.d);
     const resDen = imp1.d * imp2.d;
-    const simplified = simplify({n: resNum, d: resDen});
+    const simplified = simplify({ n: resNum, d: resDen });
     const answerMixed = toMixed(simplified);
 
     return {
@@ -185,13 +184,13 @@ const generateFractionSubtractionUnlikeDenominators = (): Question => {
         [num1, num2] = [num2, num1];
         [den1, den2] = [den2, den1];
     }
-    
+
     const resNum = (num1 * den2) - (num2 * den1);
     if (resNum === 0) return generateFractionSubtractionUnlikeDenominators();
 
     const resDen = den1 * den2;
-    const answerFrac = simplify({n: resNum, d: resDen});
-    
+    const answerFrac = simplify({ n: resNum, d: resDen });
+
     return {
         type: QuestionType.FractionSubtractionUnlikeDenominators,
         text: ``,
@@ -208,7 +207,7 @@ const generateFractionSubtractionSimpleDenominators = (): Question => {
     let num1 = randomInt(1, den1 - 1);
     let num2 = randomInt(1, den2 - 1);
 
-    if ((num1/den1) < (num2/den2)) {
+    if ((num1 / den1) < (num2 / den2)) {
         [num1, num2] = [num2, num1];
         [den1, den2] = [den2, den1]; // den2 will now be the smaller one
     }
@@ -218,7 +217,7 @@ const generateFractionSubtractionSimpleDenominators = (): Question => {
     const resNum = den1 > den2 ? num1 - (num2 * mult) : (num1 * mult) - num2;
     if (resNum === 0) return generateFractionSubtractionSimpleDenominators();
 
-    const answerFrac = simplify({n: resNum, d: commonDen});
+    const answerFrac = simplify({ n: resNum, d: commonDen });
 
     return {
         type: QuestionType.FractionSubtractionSimpleDenominators,
@@ -233,8 +232,8 @@ const generateFractionSubtractionMixedNumbers = (): Question => {
     let f2 = createMixedNumber();
     let imp1 = toImproper(f1);
     let imp2 = toImproper(f2);
-    
-    if ((imp1.n/imp1.d) < (imp2.n/imp2.d)) {
+
+    if ((imp1.n / imp1.d) < (imp2.n / imp2.d)) {
         [f1, f2] = [f2, f1];
         [imp1, imp2] = [imp2, imp1];
     }
@@ -243,7 +242,7 @@ const generateFractionSubtractionMixedNumbers = (): Question => {
     if (resNum === 0) return generateFractionSubtractionMixedNumbers();
 
     const resDen = imp1.d * imp2.d;
-    const simplified = simplify({n: resNum, d: resDen});
+    const simplified = simplify({ n: resNum, d: resDen });
     const answerMixed = toMixed(simplified);
 
     return {
@@ -263,8 +262,8 @@ const generateFractionMultiplication = (): Question => {
 
     const resNum = num1 * num2;
     const resDen = den1 * den2;
-    const answerFrac = simplify({n: resNum, d: resDen});
-    
+    const answerFrac = simplify({ n: resNum, d: resDen });
+
     return {
         type: QuestionType.FractionMultiplication,
         text: ``,
@@ -276,15 +275,15 @@ const generateFractionMultiplication = (): Question => {
 
 const generateFractionMultiplicationMixedNumbers = (): Question => {
     const f1 = createMixedNumber();
-    const f2 = {w: 0, n: randomInt(1,5), d: randomInt(6,10)}; // one mixed, one simple
+    const f2 = { w: 0, n: randomInt(1, 5), d: randomInt(6, 10) }; // one mixed, one simple
     const imp1 = toImproper(f1);
     const imp2 = toImproper(f2);
 
     const resNum = imp1.n * imp2.n;
     const resDen = imp1.d * imp2.d;
-    const simplified = simplify({n: resNum, d: resDen});
+    const simplified = simplify({ n: resNum, d: resDen });
     const answerMixed = toMixed(simplified);
-    
+
     return {
         type: QuestionType.FractionMultiplicationMixedNumbers,
         text: ``,
@@ -301,7 +300,7 @@ const generateFractionDivision = (): Question => {
 
     const resNum = num1;
     const resDen = den1 * divisor;
-    const answerFrac = simplify({n: resNum, d: resDen});
+    const answerFrac = simplify({ n: resNum, d: resDen });
 
     return {
         type: QuestionType.FractionDivision,
@@ -317,7 +316,7 @@ const generateFractionsOfAmounts = (): Question => {
     const num = randomInt(1, den - 1);
     const multiple = randomInt(2, 12);
     const amount = den * multiple;
-    
+
     const answer = (amount / den) * num;
 
     return {
@@ -354,7 +353,7 @@ const generateDecimalMultiplication = (): Question => {
 };
 
 const generatePercentages = (): Question => {
-    const percentage = [10, 20, 25, 50, 75][randomInt(0,4)];
+    const percentage = [10, 20, 25, 50, 75][randomInt(0, 4)];
     const num = randomInt(2, 20) * 10;
     const answer = (percentage / 100) * num;
     return { type: QuestionType.Percentages, text: `${percentage}% of ${num} =`, answer: answer.toString() };
@@ -395,14 +394,14 @@ const generatePlaceValue = (): Question => {
     const answerIndex = randomInt(0, parts.length - 1);
     const answer = parts[answerIndex];
     const questionParts = [...parts.slice(0, answerIndex), ...parts.slice(answerIndex + 1)];
-    
+
     // Shuffle question parts and add the blank
     const displayParts = [...questionParts.map(formatWithCommas), '_'];
-    for(let i = displayParts.length - 1; i > 0; i--) {
+    for (let i = displayParts.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [displayParts[i], displayParts[j]] = [displayParts[j], displayParts[i]];
     }
-    
+
     const text = `${formatWithCommas(num)} = ${displayParts.join(' + ')}`;
     return { type: QuestionType.PlaceValue, text, answer: formatWithCommas(answer) };
 };
@@ -464,7 +463,7 @@ export const generateQuestionByType = (type: QuestionType): Question => {
     if (type === QuestionType.DivideBy10_100_1000) {
         // We need to ensure a division question is generated
         let q = generators[type]();
-        while(q.type !== QuestionType.DivideBy10_100_1000) {
+        while (q.type !== QuestionType.DivideBy10_100_1000) {
             q = generators[type]();
         }
         return q;
