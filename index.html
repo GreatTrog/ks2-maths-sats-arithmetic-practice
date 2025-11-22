@@ -1,11 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>KS2 Maths SATs Practice</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script type="importmap">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KS2 Maths SATs Practice</title>
+
+  <!-- Google Fonts: Fredoka -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Fredoka', 'sans-serif'],
+          },
+          colors: {
+            primary: '#6366f1', // Indigo 500
+            secondary: '#f59e0b', // Amber 500
+            accent: '#ec4899', // Pink 500
+            background: '#f0f9ff', // Sky 50
+            surface: '#ffffff',
+          },
+          animation: {
+            'bounce-slow': 'bounce 3s infinite',
+            'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #f0f9ff;
+      background-image: radial-gradient(#e0f2fe 2px, transparent 2px);
+      background-size: 32px 32px;
+    }
+  </style>
+  <script type="importmap">
 {
   "imports": {
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
@@ -15,12 +51,12 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
-  <body>
-    <div id="root"></div>
-    <!-- Main application script -->
-    <script type="module" src="index.tsx"></script>
+
+<body>
+  <div id="root"></div>
+  <!-- Main application script -->
   <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>

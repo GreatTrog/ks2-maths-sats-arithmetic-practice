@@ -1,18 +1,23 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Question, QuestionType, PracticeState } from './types';
 import { generateNewQuestion, generateQuestionByType, questionTypes } from './services/questionService';
 import { getBakedExplanation } from './services/explanationService';
 
 const CheckIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
   </svg>
 );
 
 const CrossIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+  </svg>
+);
+
+const StarIcon = ({ filled }: { filled: boolean }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={`h-8 w-8 transition-all duration-300 ${filled ? 'text-yellow-400 scale-110' : 'text-gray-300'}`} viewBox="0 0 20 20" fill="currentColor">
+    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
   </svg>
 );
 
@@ -73,10 +78,10 @@ const areFractionsEquivalent = (userAnswer: string, correctAnswer: string): bool
 
 
 const PracticeTracker: React.FC<{ count: number }> = ({ count }) => (
-  <div className="flex space-x-2 justify-center">
+  <div className="flex space-x-3 justify-center p-2 bg-white/50 rounded-full backdrop-blur-sm">
     {[1, 2, 3].map((i) => (
-      <div key={i} className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${i <= count ? 'bg-green-500 border-green-600' : 'bg-gray-200 border-gray-400'}`}>
-        {i <= count && <CheckIcon />}
+      <div key={i} className="transform transition-all duration-300 hover:scale-110">
+        <StarIcon filled={i <= count} />
       </div>
     ))}
   </div>
@@ -133,14 +138,14 @@ const StepByStepGuidancePanel: React.FC<StepByStepGuidancePanelProps> = ({ steps
 
     if (showAll) {
         return (
-            <div className="w-full max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-lg border-2 border-amber-400 animate-fade-in">
-                <h3 className="text-xl font-bold text-gray-800 mb-4">All Steps</h3>
+            <div className="w-full max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow-xl border-4 border-secondary animate-fade-in">
+                <h3 className="text-2xl font-bold text-gray-800 mb-4">All Steps</h3>
                 <div className="prose max-w-none text-gray-700 space-y-4">
                     {steps.map((step, index) => (
                         <div key={index}>
                            <div className="flex items-center gap-2">
                                <p className="font-bold">Step {index + 1}:</p>
-                                <button onClick={() => speakText(step)} className="text-gray-500 hover:text-blue-600 transition-colors" aria-label={`Read step ${index + 1} aloud`}>
+                                <button onClick={() => speakText(step)} className="text-gray-400 hover:text-primary transition-colors transform hover:scale-110" aria-label={`Read step ${index + 1} aloud`}>
                                     <SpeakerIcon />
                                 </button>
                            </div>
@@ -150,7 +155,7 @@ const StepByStepGuidancePanel: React.FC<StepByStepGuidancePanelProps> = ({ steps
                 </div>
                 <button
                     onClick={onContinue}
-                    className="mt-6 w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-opacity-50"
+                    className="mt-6 w-full bg-secondary hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1"
                 >
                     Got it! Let's Practice
                 </button>
@@ -159,40 +164,40 @@ const StepByStepGuidancePanel: React.FC<StepByStepGuidancePanelProps> = ({ steps
     }
     
     return (
-        <div className="w-full max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-lg border-2 border-amber-400 animate-fade-in">
+        <div className="w-full max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow-xl border-4 border-secondary animate-fade-in">
             <div className="flex justify-between items-start mb-4">
                 <div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Let's break it down...</h3>
-                    <p className="text-gray-600">Step {currentStepIndex + 1} of {steps.length}</p>
+                    <h3 className="text-2xl font-bold text-gray-800 mb-2">Let's break it down... 🧐</h3>
+                    <p className="text-gray-600 font-medium">Step {currentStepIndex + 1} of {steps.length}</p>
                 </div>
-                <button onClick={() => speakText(steps[currentStepIndex])} className="text-gray-500 hover:text-blue-600 transition-colors" aria-label={`Read step ${currentStepIndex + 1} aloud`}>
+                <button onClick={() => speakText(steps[currentStepIndex])} className="text-gray-400 hover:text-primary transition-colors transform hover:scale-110" aria-label={`Read step ${currentStepIndex + 1} aloud`}>
                     <SpeakerIcon />
                 </button>
             </div>
 
-            <div className="prose max-w-none text-gray-700 min-h-[120px] mb-4" dangerouslySetInnerHTML={formattedContent(steps[currentStepIndex])} />
+            <div className="prose max-w-none text-gray-700 min-h-[120px] mb-6 text-lg bg-blue-50 p-4 rounded-xl border border-blue-100" dangerouslySetInnerHTML={formattedContent(steps[currentStepIndex])} />
 
             <div className="mt-6 space-y-3">
                 {currentStepIndex < steps.length - 1 ? (
                     <button
                         onClick={handleNextStep}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200"
+                        className="w-full bg-primary hover:bg-indigo-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1"
                     >
-                        Next Step
+                        Next Step ➡️
                     </button>
                 ) : (
                     <button
                         onClick={handleShowAll}
-                        className="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200"
+                        className="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
                     >
-                        Display All Steps
+                        Show All Steps 📝
                     </button>
                 )}
                 <button
                     onClick={onContinue}
-                    className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200"
+                    className="w-full bg-secondary hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1"
                 >
-                    I'm Ready for the Next Question
+                    I'm Ready for the Next Question! 🚀
                 </button>
             </div>
         </div>
@@ -481,38 +486,43 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4 font-sans">
-      <div className="w-full max-w-2xl text-center mb-4">
-        <h1 className="text-4xl font-bold text-blue-700">KS2 Arithmetic Practice</h1>
-        <p className="text-gray-600 mt-2">Master your maths skills, one question at a time!</p>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 font-sans">
+      <div className="w-full max-w-2xl text-center mb-8 animate-bounce-slow">
+        <h1 className="text-5xl md:text-6xl font-bold text-primary drop-shadow-sm mb-2">KS2 Maths Fun! 🧮</h1>
+        <p className="text-xl text-gray-600 font-medium">Master your maths skills, one question at a time!</p>
       </div>
       
-      <div className="w-full max-w-xs mx-auto mb-6">
-          <label htmlFor="topic-select" className="block text-sm font-medium text-gray-700 mb-1 text-center">
+      <div className="w-full max-w-xs mx-auto mb-8">
+          <label htmlFor="topic-select" className="block text-lg font-bold text-gray-700 mb-2 text-center">
             Choose a topic to practice:
           </label>
-          <select
-            id="topic-select"
-            value={selectedTopic}
-            onChange={handleTopicChange}
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm"
-          >
-            <option value="All">All Topics (Random)</option>
-            {questionTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              id="topic-select"
+              value={selectedTopic}
+              onChange={handleTopicChange}
+              className="block w-full pl-4 pr-10 py-3 text-lg border-2 border-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/20 focus:border-primary rounded-2xl shadow-sm bg-white appearance-none cursor-pointer transition-all hover:border-primary"
+            >
+              <option value="All">🎲 All Topics (Random)</option>
+              {questionTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-primary">
+              <svg className="h-6 w-6 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+            </div>
+          </div>
         </div>
 
 
       {practiceState && (
-          <div className="w-full max-w-2xl mx-auto bg-blue-100 p-4 rounded-lg shadow-md mb-6 border border-blue-300">
-            <h3 className="text-lg font-semibold text-blue-800 text-center mb-2">Practice Zone: {practiceState.type}</h3>
+          <div className="w-full max-w-2xl mx-auto bg-white/80 backdrop-blur p-6 rounded-3xl shadow-xl mb-8 border-4 border-blue-200 animate-fade-in">
+            <h3 className="text-xl font-bold text-primary text-center mb-4">Practice Zone: {practiceState.type}</h3>
             <PracticeTracker count={practiceState.correctInARow} />
-            <p className="text-center text-sm text-blue-700 mt-2">Get 3 in a row correct to move to a new topic!</p>
-            <div className="mt-4 text-center">
-              <p className="text-sm font-medium text-blue-700 mb-2">Timer per question</p>
-              <div className="flex flex-wrap justify-center gap-2">
+            <p className="text-center text-base text-gray-600 mt-3 font-medium">Get 3 stars to unlock a new topic! ⭐⭐⭐</p>
+            <div className="mt-6 text-center">
+              <p className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">Timer per question</p>
+              <div className="flex flex-wrap justify-center gap-3">
                 {practiceTimerOptions.map((option) => (
                   <button
                     key={`timer-${option.seconds}`}
@@ -520,10 +530,10 @@ export default function App() {
                       setPracticeTimerSeconds(option.seconds);
                       setSecondsRemaining(option.seconds);
                     }}
-                    className={`px-3 py-1 rounded-full border text-sm font-semibold transition-colors duration-200 ${
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-all duration-200 transform hover:scale-105 ${
                       practiceTimerSeconds === option.seconds
-                        ? 'bg-blue-600 border-blue-700 text-white'
-                        : 'bg-white border-blue-200 text-blue-700 hover:border-blue-400'
+                        ? 'bg-primary text-white shadow-lg ring-2 ring-primary ring-offset-2'
+                        : 'bg-white text-gray-600 border-2 border-gray-200 hover:border-primary hover:text-primary'
                     }`}
                   >
                     {option.label}
@@ -531,8 +541,8 @@ export default function App() {
                 ))}
               </div>
               {practiceTimerSeconds > 0 && currentQuestion && (
-                <div className="mt-3 text-2xl font-bold text-blue-800">
-                  Time left: {formatCountdown(secondsRemaining)}
+                <div className={`mt-4 text-3xl font-black transition-colors duration-300 ${secondsRemaining <= 5 ? 'text-red-500 animate-pulse' : 'text-primary'}`}>
+                  ⏱️ {formatCountdown(secondsRemaining)}
                 </div>
               )}
             </div>
@@ -540,53 +550,54 @@ export default function App() {
       )}
 
       {currentQuestion && !explanation && (
-        <div className="w-full max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-lg transition-all duration-300">
-            <div className="text-center mb-6">
-                <span className="text-sm font-semibold bg-gray-200 text-gray-700 px-3 py-1 rounded-full">{currentQuestion.type}</span>
+        <div className="w-full max-w-2xl mx-auto bg-white p-8 md:p-10 rounded-3xl shadow-2xl border-b-8 border-gray-200 transition-all duration-300">
+            <div className="text-center mb-8">
+                <span className="inline-block bg-blue-100 text-blue-800 text-sm font-bold px-4 py-1.5 rounded-full uppercase tracking-wide">{currentQuestion.type}</span>
             </div>
             
             <QuestionDisplay question={currentQuestion} />
             
-            <div className="mt-8">
+            <div className="mt-10">
               <input
                 type="text"
                 value={userAnswer}
                 onChange={(e) => setUserAnswer(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && isAnswering && handleCheckAnswer()}
-                placeholder="Your Answer"
-                className={`w-full p-4 text-2xl border-2 rounded-lg text-center transition-all duration-300 focus:ring-2 bg-white text-gray-800 placeholder:text-gray-400
-                  ${feedback === 'hidden' ? 'border-gray-300 focus:border-blue-500 focus:ring-blue-300' : ''}
-                  ${feedback === 'correct' ? 'border-green-500 bg-green-50 focus:ring-green-300' : ''}
-                  ${feedback === 'incorrect' ? 'border-red-500 bg-red-50 focus:ring-red-300' : ''}
-                  ${feedback === 'timeout' ? 'border-orange-500 bg-orange-50 focus:ring-orange-300' : ''}`}
+                placeholder="?"
+                className={`w-full p-5 text-4xl font-bold border-4 rounded-2xl text-center transition-all duration-300 focus:ring-4 outline-none bg-gray-50 text-gray-800 placeholder:text-gray-300
+                  ${feedback === 'hidden' ? 'border-gray-200 focus:border-primary focus:ring-primary/20' : ''}
+                  ${feedback === 'correct' ? 'border-green-400 bg-green-50 focus:ring-green-200' : ''}
+                  ${feedback === 'incorrect' ? 'border-red-400 bg-red-50 focus:ring-red-200' : ''}
+                  ${feedback === 'timeout' ? 'border-orange-400 bg-orange-50 focus:ring-orange-200' : ''}`}
                 disabled={!isAnswering}
+                autoFocus
               />
             </div>
 
-            <div className="mt-4 h-8 flex items-center justify-center">
+            <div className="mt-6 min-h-[3rem] flex items-center justify-center">
               {feedback === 'correct' && (
-                <div className="flex items-center text-green-600 font-bold">
+                <div className="flex items-center text-green-500 font-black text-xl animate-bounce">
                   <CheckIcon /> 
-                  <span className="ml-2">Correct! Well done!</span>
-                  <button onClick={() => speakText('Correct! Well done!')} className="ml-2 text-gray-500 hover:text-blue-600 transition-colors" aria-label="Read feedback aloud">
+                  <span className="ml-2">Awesome! Correct! 🎉</span>
+                  <button onClick={() => speakText('Correct! Well done!')} className="ml-2 text-gray-400 hover:text-green-600 transition-colors" aria-label="Read feedback aloud">
                     <SpeakerIcon />
                   </button>
                 </div>
               )}
               {feedback === 'incorrect' && (
-                <div className="flex items-center text-red-600 font-bold">
+                <div className="flex items-center text-red-500 font-black text-xl animate-shake">
                   <CrossIcon /> 
-                  <span className="ml-2">Not quite, let's review.</span>
-                   <button onClick={() => speakText("Not quite, let's review.")} className="ml-2 text-gray-500 hover:text-blue-600 transition-colors" aria-label="Read feedback aloud">
+                  <span className="ml-2">Oops! Not quite. 🤔</span>
+                   <button onClick={() => speakText("Not quite, let's review.")} className="ml-2 text-gray-400 hover:text-red-600 transition-colors" aria-label="Read feedback aloud">
                     <SpeakerIcon />
                   </button>
                 </div>
               )}
               {feedback === 'timeout' && (
-                <div className="flex items-center text-orange-600 font-bold">
-                  <CrossIcon />
-                  <span className="ml-2">Time's up! Keep calm and try again.</span>
-                  <button onClick={() => speakText("Time's up! Keep calm and try again.")} className="ml-2 text-gray-500 hover:text-blue-600 transition-colors" aria-label="Read timeout feedback aloud">
+                <div className="flex items-center text-orange-500 font-black text-xl">
+                  <span className="text-3xl mr-2">⏰</span>
+                  <span className="ml-2">Time's up! Try again!</span>
+                  <button onClick={() => speakText("Time's up! Keep calm and try again.")} className="ml-2 text-gray-400 hover:text-orange-600 transition-colors" aria-label="Read timeout feedback aloud">
                     <SpeakerIcon />
                   </button>
                 </div>
@@ -596,9 +607,9 @@ export default function App() {
             <button
                 onClick={handleCheckAnswer}
                 disabled={!isAnswering || userAnswer.trim() === ''}
-                className="mt-4 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white font-bold py-4 px-4 rounded-lg transition-colors duration-200 text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                className="mt-8 w-full bg-secondary hover:bg-amber-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-black py-4 px-6 rounded-2xl shadow-[0_4px_0_0_rgba(0,0,0,0.1)] hover:shadow-[0_2px_0_0_rgba(0,0,0,0.1)] hover:translate-y-[2px] transition-all duration-200 text-2xl uppercase tracking-wider"
             >
-              Check Answer
+              Check Answer ✨
             </button>
         </div>
       )}
