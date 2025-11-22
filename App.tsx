@@ -6,6 +6,7 @@ import { getBakedExplanation } from './services/explanationService';
 import AdditionVisualizer from './components/visualizers/AdditionVisualizer';
 import SubtractionVisualizer from './components/visualizers/SubtractionVisualizer';
 import ShortMultiplicationVisualizer from './components/visualizers/ShortMultiplicationVisualizer';
+import LongMultiplicationVisualizer from './components/visualizers/LongMultiplicationVisualizer';
 
 // --- Icons ---
 const CheckIcon = () => (
@@ -203,6 +204,9 @@ const StepByStepGuidancePanel: React.FC<{
             )}
             {question.type === QuestionType.Multiplication && (
               <ShortMultiplicationVisualizer question={question} stepIndex={stepIndex} />
+            )}
+            {question.type === QuestionType.LongMultiplication && (
+              <LongMultiplicationVisualizer question={question} stepIndex={stepIndex} />
             )}
           </div>
         </div>

@@ -97,7 +97,7 @@ const generateLongMultiplication = (): Question => {
     const num2 = randomInt(10, 99);
     return {
         type: QuestionType.LongMultiplication,
-        text: ``,
+        text: `${num1} × ${num2} =`,
         operands: [num1.toString(), num2.toString()],
         operator: '×',
         answer: (num1 * num2).toString()
@@ -128,7 +128,7 @@ const generateFractionAdditionUnlikeDenominators = (): Question => {
 
     return {
         type: QuestionType.FractionAdditionUnlikeDenominators,
-        text: ``,
+        text: `${num1}/${den1} + ${num2}/${den2} =`,
         operands: [`${num1}/${den1}`, `${num2}/${den2}`],
         operator: '+',
         answer: simpleFractionToString(answerFrac)
@@ -147,7 +147,7 @@ const generateFractionAdditionSimpleDenominators = (): Question => {
 
     return {
         type: QuestionType.FractionAdditionSimpleDenominators,
-        text: ``,
+        text: `${num1}/${den1} + ${num2}/${den2} =`,
         operands: [`${num1}/${den1}`, `${num2}/${den2}`],
         operator: '+',
         answer: simpleFractionToString(answerFrac)
@@ -167,7 +167,7 @@ const generateFractionAdditionMixedNumbers = (): Question => {
 
     return {
         type: QuestionType.FractionAdditionMixedNumbers,
-        text: ``,
+        text: `${mixedNumberToString(f1)} + ${mixedNumberToString(f2)} =`,
         operands: [mixedNumberToString(f1), mixedNumberToString(f2)],
         operator: '+',
         answer: mixedNumberToString(answerMixed)
@@ -193,7 +193,7 @@ const generateFractionSubtractionUnlikeDenominators = (): Question => {
 
     return {
         type: QuestionType.FractionSubtractionUnlikeDenominators,
-        text: ``,
+        text: `${num1}/${den1} - ${num2}/${den2} =`,
         operands: [`${num1}/${den1}`, `${num2}/${den2}`],
         operator: '−',
         answer: simpleFractionToString(answerFrac)
@@ -221,7 +221,7 @@ const generateFractionSubtractionSimpleDenominators = (): Question => {
 
     return {
         type: QuestionType.FractionSubtractionSimpleDenominators,
-        text: ``,
+        text: `${num1}/${den1} - ${num2}/${den2} =`,
         operands: [`${num1}/${den1}`, `${num2}/${den2}`],
         operator: '−',
         answer: simpleFractionToString(answerFrac)
@@ -247,7 +247,7 @@ const generateFractionSubtractionMixedNumbers = (): Question => {
 
     return {
         type: QuestionType.FractionSubtractionMixedNumbers,
-        text: ``,
+        text: `${mixedNumberToString(f1)} - ${mixedNumberToString(f2)} =`,
         operands: [mixedNumberToString(f1), mixedNumberToString(f2)],
         operator: '−',
         answer: mixedNumberToString(answerMixed)
@@ -266,7 +266,7 @@ const generateFractionMultiplication = (): Question => {
 
     return {
         type: QuestionType.FractionMultiplication,
-        text: ``,
+        text: `${num1}/${den1} × ${num2}/${den2} =`,
         operands: [`${num1}/${den1}`, `${num2}/${den2}`],
         operator: '×',
         answer: simpleFractionToString(answerFrac)
@@ -286,7 +286,7 @@ const generateFractionMultiplicationMixedNumbers = (): Question => {
 
     return {
         type: QuestionType.FractionMultiplicationMixedNumbers,
-        text: ``,
+        text: `${mixedNumberToString(f1)} × ${mixedNumberToString(f2)} =`,
         operands: [mixedNumberToString(f1), mixedNumberToString(f2)],
         operator: '×',
         answer: mixedNumberToString(answerMixed)
@@ -304,7 +304,7 @@ const generateFractionDivision = (): Question => {
 
     return {
         type: QuestionType.FractionDivision,
-        text: ``,
+        text: `${num1}/${den1} ÷ ${divisor} =`,
         operands: [`${num1}/${den1}`, `${divisor}`],
         operator: '÷',
         answer: simpleFractionToString(answerFrac)
