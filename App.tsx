@@ -7,6 +7,7 @@ import AdditionVisualizer from './components/visualizers/AdditionVisualizer';
 import SubtractionVisualizer from './components/visualizers/SubtractionVisualizer';
 import ShortMultiplicationVisualizer from './components/visualizers/ShortMultiplicationVisualizer';
 import LongMultiplicationVisualizer from './components/visualizers/LongMultiplicationVisualizer';
+import WorkingOutCanvas from './components/WorkingOutCanvas';
 
 // --- Icons ---
 const CheckIcon = () => (
@@ -250,6 +251,7 @@ export default function App() {
   const [isAnswering, setIsAnswering] = useState(true);
   const [selectedTopic, setSelectedTopic] = useState<QuestionType | 'All'>('All');
   const [explanation, setExplanation] = useState<string[] | null>(null);
+  const [showCanvas, setShowCanvas] = useState(false);
 
   // Practice Mode State
   const [practiceState, setPracticeState] = useState<{ type: QuestionType, correctInARow: number } | null>(null);
@@ -314,7 +316,9 @@ export default function App() {
     setUserAnswer('');
     setFeedback('hidden');
     setIsAnswering(true);
+    setIsAnswering(true);
     setExplanation(null);
+    setShowCanvas(false); // Hide canvas on new question
   }
 
   const startNewQuestion = useCallback((typeToExclude?: QuestionType) => {
@@ -514,20 +518,31 @@ export default function App() {
           <QuestionDisplay question={currentQuestion} />
 
           <div className="mt-10">
-            <input
-              type="text"
-              value={userAnswer}
-              onChange={(e) => setUserAnswer(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && isAnswering && handleCheckAnswer()}
-              placeholder="?"
-              className={`w-full p-5 text-4xl font-bold border-4 rounded-2xl text-center transition-all duration-300 focus:ring-4 outline-none bg-gray-50 text-gray-800 placeholder:text-gray-300
-                  ${feedback === 'hidden' ? 'border-gray-200 focus:border-primary focus:ring-primary/20' : ''}
-                  ${feedback === 'correct' ? 'border-green-400 bg-green-50 focus:ring-green-200' : ''}
-                  ${feedback === 'incorrect' ? 'border-red-400 bg-red-50 focus:ring-red-200' : ''}
-                  ${feedback === 'timeout' ? 'border-orange-400 bg-orange-50 focus:ring-orange-200' : ''}`}
-              disabled={!isAnswering}
-              autoFocus
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={userAnswer}
+                onChange={(e) => setUserAnswer(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && isAnswering && handleCheckAnswer()}
+                placeholder="?"
+                className={`w-full p-5 text-4xl font-bold border-4 rounded-2xl text-center transition-all duration-300 focus:ring-4 outline-none bg-gray-50 text-gray-800 placeholder:text-gray-300
+                    ${feedback === 'hidden' ? 'border-gray-200 focus:border-primary focus:ring-primary/20' : ''}
+                    ${feedback === 'correct' ? 'border-green-400 bg-green-50 focus:ring-green-200' : ''}
+                    ${feedback === 'incorrect' ? 'border-red-400 bg-red-50 focus:ring-red-200' : ''}
+                    ${feedback === 'timeout' ? 'border-orange-400 bg-orange-50 focus:ring-orange-200' : ''}`}
+                disabled={!isAnswering}
+                autoFocus
+              />
+              <button
+                onClick={() => setShowCanvas(true)}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-primary transition-colors p-2"
+                title="Show Working Out"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div className="mt-6 min-h-[3rem] flex items-center justify-center">
@@ -573,6 +588,12 @@ export default function App() {
       {explanation && currentQuestion && (
         <StepByStepGuidancePanel steps={explanation} onContinue={startPracticeQuestion} speakText={speakText} question={currentQuestion} />
       )}
+
+      <WorkingOutCanvas
+        isVisible={showCanvas}
+        onClose={() => setShowCanvas(false)}
+        question={currentQuestion}
+      />
     </div>
   );
 }
