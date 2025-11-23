@@ -218,6 +218,7 @@ const StepByStepGuidancePanel: React.FC<{
 
 // --- Main App Component ---
 
+
 const questionTypes = Object.values(QuestionType);
 
 // Helper to check fraction equivalence (simplified)
@@ -232,6 +233,8 @@ const sanitizeForSpeech = (text: string) => {
   return text
     .replace(/\*\*/g, '') // Remove bold markers
     .replace(/(\d+)\/(\d+)/g, '$1 over $2') // Fractions
+    .replace(/×/g, ' times ')  // Multiplication symbol
+    .replace(/÷/g, ' divided by ')  // Division symbol
     .replace(/-/g, ' minus ')
     .replace(/\+/g, ' plus ')
     .replace(/=/g, ' equals ');
@@ -244,6 +247,60 @@ const formatCountdown = (seconds: number) => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
+
+// Mastery Popup Component
+const MasteryPopup: React.FC<{
+  onSelectTopic: (topic: QuestionType) => void;
+  onSelectRandom: () => void;
+  questionTypes: string[];
+}> = ({ onSelectTopic, onSelectRandom, questionTypes }) => {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full text-center border-4 border-yellow-400 animate-bounce-in relative">
+        <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 text-6xl">
+          🏆
+        </div>
+        <h2 className="text-3xl font-black text-yellow-500 mb-4 mt-6">Congratulations!</h2>
+        <p className="text-gray-600 mb-8 text-lg font-medium">You have mastered this topic!</p>
+
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-bold text-gray-500 mb-2 uppercase tracking-wide">Choose another topic:</label>
+            <div className="relative">
+              <select
+                onChange={(e) => onSelectTopic(e.target.value as QuestionType)}
+                className="block w-full pl-4 pr-10 py-3 text-lg border-2 border-gray-200 focus:outline-none focus:ring-4 focus:ring-primary/20 focus:border-primary rounded-xl shadow-sm bg-white appearance-none cursor-pointer transition-all hover:border-primary text-gray-700"
+                defaultValue=""
+              >
+                <option value="" disabled>Select a topic...</option>
+                {questionTypes.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                <svg className="h-5 w-5 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t-2 border-gray-100"></div>
+            <span className="flex-shrink mx-4 text-gray-400 font-bold text-sm">OR</span>
+            <div className="flex-grow border-t-2 border-gray-100"></div>
+          </div>
+
+          <button
+            onClick={onSelectRandom}
+            className="w-full bg-primary hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+          >
+            <span>🎲</span> Let me pick a random question
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [userAnswer, setUserAnswer] = useState('');
@@ -252,6 +309,7 @@ export default function App() {
   const [selectedTopic, setSelectedTopic] = useState<QuestionType | 'All'>('All');
   const [explanation, setExplanation] = useState<string[] | null>(null);
   const [showCanvas, setShowCanvas] = useState(false);
+  const [showMasteryPopup, setShowMasteryPopup] = useState(false);
 
   // Practice Mode State
   const [practiceState, setPracticeState] = useState<{ type: QuestionType, correctInARow: number } | null>(null);
@@ -288,6 +346,7 @@ export default function App() {
 
   // Timer transition ref
   const timeUpTransitionRef = useRef<NodeJS.Timeout | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {
@@ -296,6 +355,15 @@ export default function App() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (isAnswering && inputRef.current && !showMasteryPopup) {
+      // Small timeout to ensure DOM is ready and transition is complete
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50);
+    }
+  }, [currentQuestion, isAnswering, showMasteryPopup]);
 
   const speakText = useCallback((text: string) => {
     if (!('speechSynthesis' in window) || !text) return;
@@ -428,11 +496,15 @@ export default function App() {
     if (isCorrect) {
       if (practiceState) {
         const newCount = practiceState.correctInARow + 1;
+        setPracticeState({ ...practiceState, correctInARow: newCount });
+
         if (newCount >= 3) {
-          setPracticeState(null);
-          setSelectedTopic('All');
+          // Mastery achieved!
+          setTimeout(() => {
+            setShowMasteryPopup(true);
+            speakText("Congratulations, you have mastered this topic!");
+          }, 1500);
         } else {
-          setPracticeState({ ...practiceState, correctInARow: newCount });
           setTimeout(startPracticeQuestion, 1500);
         }
       } else {
@@ -446,8 +518,29 @@ export default function App() {
     }
   };
 
+  const handleMasterySelectTopic = (topic: QuestionType) => {
+    setShowMasteryPopup(false);
+    setSelectedTopic(topic);
+    // practiceState will be updated by the useEffect on selectedTopic
+  };
+
+  const handleMasterySelectRandom = () => {
+    setShowMasteryPopup(false);
+    setSelectedTopic('All');
+    setPracticeState(null);
+    startNewQuestion();
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 font-sans">
+      {showMasteryPopup && (
+        <MasteryPopup
+          onSelectTopic={handleMasterySelectTopic}
+          onSelectRandom={handleMasterySelectRandom}
+          questionTypes={questionTypes}
+        />
+      )}
+
       <div className="w-full max-w-2xl text-center mb-8 animate-bounce-slow">
         <h1 className="text-5xl md:text-6xl font-bold text-primary drop-shadow-sm mb-2">KS2 Maths Fun! 🧮</h1>
         <p className="text-xl text-gray-600 font-medium">Master your maths skills, one question at a time!</p>
@@ -520,6 +613,7 @@ export default function App() {
           <div className="mt-10">
             <div className="relative">
               <input
+                ref={inputRef}
                 type="text"
                 value={userAnswer}
                 onChange={(e) => setUserAnswer(e.target.value)}

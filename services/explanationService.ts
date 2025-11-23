@@ -64,7 +64,6 @@ const getMultiplicationExplanation = (q: Question): string[] => {
     ];
 };
 
-
 const getLongMultiplicationExplanation = (q: Question): string[] => {
     const [num1, num2] = getOperands(q);
     const onesDigit = num2.slice(-1);
@@ -78,13 +77,40 @@ const getLongMultiplicationExplanation = (q: Question): string[] => {
 };
 
 const getMultiplication3NumbersExplanation = (q: Question): string[] => {
-    const [num1, num2, num3] = getOperands(q, 3);
-    const firstStep = parseInt(num1) * parseInt(num2);
+    const [n1Str, n2Str, n3Str] = getOperands(q, 3);
+    const n1 = parseInt(n1Str);
+    const n2 = parseInt(n2Str);
+    const n3 = parseInt(n3Str);
+
+    // Define the 3 possible pairs and their "remaining" number
+    const options = [
+        { a: n1, b: n2, rem: n3, aStr: n1Str, bStr: n2Str, remStr: n3Str },
+        { a: n2, b: n3, rem: n1, aStr: n2Str, bStr: n3Str, remStr: n1Str },
+        { a: n1, b: n3, rem: n2, aStr: n1Str, bStr: n3Str, remStr: n2Str }
+    ];
+
+    // Strategy 1: Look for multiples of 10
+    let bestOption = options.find(opt => (opt.a * opt.b) % 10 === 0);
+    let strategyText = "";
+
+    if (bestOption) {
+        strategyText = `We chose to multiply **${bestOption.aStr}** and **${bestOption.bStr}** first because they make a multiple of 10, which is easier to work with.`;
+    } else {
+        // Strategy 2: Minimize the remaining multiplier (easier final step)
+        // Sort options by the size of the remaining number (ascending)
+        options.sort((x, y) => x.rem - y.rem);
+        bestOption = options[0];
+        strategyText = `We chose to multiply **${bestOption.aStr}** and **${bestOption.bStr}** first so that we can multiply by the smallest number (**${bestOption.remStr}**) at the end.`;
+    }
+
+    const firstStepResult = bestOption.a * bestOption.b;
+
     return [
         `**The Rule:** When multiplying three numbers, the order doesn't matter! You can multiply them in any order you find easiest.`,
-        `**Multiply the first two numbers.** Let's start by calculating **${num1} × ${num2}**. This gives us **${firstStep}**.`,
-        `**Multiply the result by the third number.** Now, we take our answer from the first step (**${firstStep}**) and multiply it by the last number, **${num3}**.`,
-        `**Final Answer.** The result of the second multiplication is our final answer. **${firstStep} × ${num3} = ${q.answer}**.`
+        `**Choose the easiest order.** ${strategyText}`,
+        `**Step 1:** Calculate **${bestOption.aStr} × ${bestOption.bStr}**. This gives us **${firstStepResult}**.`,
+        `**Step 2:** Now, take that answer (**${firstStepResult}**) and multiply it by the remaining number, **${bestOption.remStr}**.`,
+        `**Final Answer.** **${firstStepResult} × ${bestOption.remStr} = ${q.answer}**.`
     ];
 };
 
@@ -175,7 +201,7 @@ const getDecimalAdditionExplanation = (q: Question): string[] => {
 };
 
 const getDecimalSubtractionExplanation = (q: Question): string[] => {
-     const [num1, num2] = getOperands(q);
+    const [num1, num2] = getOperands(q);
     return [
         `**Line up the decimal points!** Just like addition, this is the key. Write the larger number on top, with the decimal points perfectly aligned.`,
         `**Fill in gaps with zeros.** You might need to add placeholder zeros to the end of the top number to be able to subtract.`,
@@ -213,19 +239,19 @@ const getFractionsOfAmountsExplanation = (q: Question): string[] => {
 
 const getFractionAdditionExplanation = (q: Question): string[] => {
     const [f1, f2] = getOperands(q);
-    const p1 = parseSimpleFraction(f1) || {n:0, d:1};
-    const p2 = parseSimpleFraction(f2) || {n:0, d:1};
+    const p1 = parseSimpleFraction(f1) || { n: 0, d: 1 };
+    const p2 = parseSimpleFraction(f2) || { n: 0, d: 1 };
 
     if (p1.d === p2.d || (p1.d % p2.d === 0) || (p2.d % p1.d === 0)) {
         const commonDenominator = Math.max(p1.d, p2.d);
-         return [
+        return [
             `**Find a common denominator.** To add **${f1}** and **${f2}**, the bottom numbers must be the same. Notice that **${commonDenominator}** is a multiple of both ${p1.d} and ${p2.d}. So we can use **${commonDenominator}** as our common denominator.`,
             `**Make equivalent fractions.** We need to convert one or both fractions to have the denominator ${commonDenominator}. Whatever you multiply the denominator by, you must also multiply the numerator by.`,
             `**Add the new numerators.** Now that the denominators are the same, we can just add the new top numbers together.`,
             `**Simplify if needed.** The resulting fraction might need to be simplified to get the final answer: **${q.answer}**.`
         ];
     }
-    
+
     const commonDenominator = (p1.d * p2.d) / gcd(p1.d, p2.d);
     return [
         `**Find a common denominator.** To add **${f1}** and **${f2}**, the bottom numbers (denominators) must be the same. A common multiple of ${p1.d} and ${p2.d} is **${commonDenominator}**. We find this by multiplying them (${p1.d} × ${p2.d}) or finding the Lowest Common Multiple.`,
@@ -236,11 +262,11 @@ const getFractionAdditionExplanation = (q: Question): string[] => {
 };
 
 const getFractionSubtractionExplanation = (q: Question): string[] => {
-     const [f1, f2] = getOperands(q);
-    const p1 = parseSimpleFraction(f1) || {n:0, d:1};
-    const p2 = parseSimpleFraction(f2) || {n:0, d:1};
+    const [f1, f2] = getOperands(q);
+    const p1 = parseSimpleFraction(f1) || { n: 0, d: 1 };
+    const p2 = parseSimpleFraction(f2) || { n: 0, d: 1 };
     const commonDenominator = (p1.d * p2.d) / gcd(p1.d, p2.d);
-     return [
+    return [
         `**Find a common denominator.** Just like addition, to subtract **${f2}** from **${f1}**, we need the denominators to be the same. A common denominator for ${p1.d} and ${p2.d} is **${commonDenominator}**.`,
         `**Create equivalent fractions.** Convert both fractions so they have the new denominator (${commonDenominator}). Remember to multiply the top and bottom of each fraction by the same number.`,
         `**Subtract the numerators.** With matching denominators, we can now subtract the second numerator from the first.`,
@@ -301,19 +327,19 @@ const getPercentagesExplanation = (q: Question): string[] => {
     } else if (percentage === 25) {
         steps = [
             `**Understand the percentage.** 25% is the same as a quarter (1/4). To find 25% of something, you need to divide it by 4.`,
-            `**Calculate.** You can do this by halving the number, and then halving it again. **${amount} ÷ 2 = ${parseInt(amount)/2}**. Then **${parseInt(amount)/2} ÷ 2 = ${q.answer}**.`
+            `**Calculate.** You can do this by halving the number, and then halving it again. **${amount} ÷ 2 = ${parseInt(amount) / 2}**. Then **${parseInt(amount) / 2} ÷ 2 = ${q.answer}**.`
         ];
     } else if (percentage === 75) {
-         steps = [
+        steps = [
             `**Understand the percentage.** 75% is the same as three quarters (3/4). To find this, we first find one quarter (25%) and then multiply that by 3.`,
             `**Find one quarter.** First, divide **${amount}** by 4. This gives you **${parseInt(q.answer) / 3}**.`,
             `**Find three quarters.** Now, multiply the answer from the previous step by 3. **${parseInt(q.answer) / 3} × 3 = ${q.answer}**.`
         ];
     } else { // 10, 20 etc
-         steps = [
-            `**Find 10% first.** 10% is easy to find. You just divide the amount by 10. For **${amount}**, 10% is **${parseInt(amount)/10}**.`,
-            `**Build up to the target percentage.** Our question asks for **${percentage}%**. We can get this by multiplying our 10% value. Since **${percentage}** is ${percentage/10} times bigger than 10, we multiply our 10% value by ${percentage/10}.`,
-             `**Calculate.** **${parseInt(amount)/10} × ${percentage/10} = ${q.answer}**.`
+        steps = [
+            `**Find 10% first.** 10% is easy to find. You just divide the amount by 10. For **${amount}**, 10% is **${parseInt(amount) / 10}**.`,
+            `**Build up to the target percentage.** Our question asks for **${percentage}%**. We can get this by multiplying our 10% value. Since **${percentage}** is ${percentage / 10} times bigger than 10, we multiply our 10% value by ${percentage / 10}.`,
+            `**Calculate.** **${parseInt(amount) / 10} × ${percentage / 10} = ${q.answer}**.`
         ];
     }
     return steps;
