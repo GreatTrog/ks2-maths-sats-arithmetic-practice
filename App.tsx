@@ -8,6 +8,7 @@ import SubtractionVisualizer from './components/visualizers/SubtractionVisualize
 import ShortMultiplicationVisualizer from './components/visualizers/ShortMultiplicationVisualizer';
 import LongMultiplicationVisualizer from './components/visualizers/LongMultiplicationVisualizer';
 import { Multiplication3NumbersVisualizer } from './components/visualizers/Multiplication3NumbersVisualizer';
+import ShortDivisionVisualizer from './components/visualizers/ShortDivisionVisualizer';
 import WorkingOutCanvas from './components/WorkingOutCanvas';
 
 // --- Icons ---
@@ -212,6 +213,9 @@ const StepByStepGuidancePanel: React.FC<{
             )}
             {question.type === QuestionType.LongMultiplication && (
               <LongMultiplicationVisualizer question={question} stepIndex={stepIndex} />
+            )}
+            {question.type === QuestionType.Division && (
+              <ShortDivisionVisualizer question={question} stepIndex={stepIndex} />
             )}
           </div>
         </div>
