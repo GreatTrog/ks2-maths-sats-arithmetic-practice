@@ -7,6 +7,7 @@ import AdditionVisualizer from './components/visualizers/AdditionVisualizer';
 import SubtractionVisualizer from './components/visualizers/SubtractionVisualizer';
 import ShortMultiplicationVisualizer from './components/visualizers/ShortMultiplicationVisualizer';
 import LongMultiplicationVisualizer from './components/visualizers/LongMultiplicationVisualizer';
+import { Multiplication3NumbersVisualizer } from './components/visualizers/Multiplication3NumbersVisualizer';
 import WorkingOutCanvas from './components/WorkingOutCanvas';
 
 // --- Icons ---
@@ -203,6 +204,9 @@ const StepByStepGuidancePanel: React.FC<{
             {(question.type === QuestionType.Subtraction || question.type === QuestionType.SubtractionWithRegrouping) && (
               <SubtractionVisualizer question={question} stepIndex={stepIndex} />
             )}
+            {question.type === QuestionType.Multiplication3Numbers && (
+              <Multiplication3NumbersVisualizer question={question} />
+            )}
             {question.type === QuestionType.Multiplication && (
               <ShortMultiplicationVisualizer question={question} stepIndex={stepIndex} />
             )}
@@ -215,8 +219,6 @@ const StepByStepGuidancePanel: React.FC<{
     </div>
   );
 };
-
-// --- Main App Component ---
 
 
 const questionTypes = Object.values(QuestionType);
