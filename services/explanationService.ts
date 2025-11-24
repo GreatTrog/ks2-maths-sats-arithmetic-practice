@@ -136,9 +136,34 @@ const getLongDivisionExplanation = (q: Question): string[] => {
 
 const getDivisionWithKnownFactsExplanation = (q: Question): string[] => {
     const [dividend, divisor] = getOperands(q);
-    const baseDividend = parseInt(dividend) / Math.pow(10, dividend.length - divisor.length);
+
+    // Remove trailing zeros from dividend to find the base fact
+    // We want to find the largest prefix of the dividend that is divisible by the divisor
+    let baseDividend = parseInt(dividend);
+
+    const nonZeroMatch = dividend.match(/^(\d+?)0*$/);
+    if (nonZeroMatch) {
+        const prefix = parseInt(nonZeroMatch[1]);
+        if (prefix % parseInt(divisor) === 0) {
+            baseDividend = prefix;
+        } else {
+            // Try adding zeros back one by one until it works
+            let temp = prefix;
+            let originalStr = nonZeroMatch[1];
+            let zeros = dividend.length - originalStr.length;
+            for (let i = 0; i < zeros; i++) {
+                temp = temp * 10;
+                if (temp % parseInt(divisor) === 0) {
+                    baseDividend = temp;
+                    break;
+                }
+            }
+        }
+    }
+
     const baseAnswer = baseDividend / parseInt(divisor);
     const powerOf10 = parseInt(dividend) / baseDividend;
+
     return [
         `**Spot the hidden fact.** This question looks tricky, but it's based on a simple times table fact. Ignore the zeros for a moment. Can you see the simpler problem? It's **${baseDividend} ÷ ${divisor}**.`,
         `**Solve the simple fact.** We know from our times tables that **${baseDividend} ÷ ${divisor} = ${baseAnswer}**.`,

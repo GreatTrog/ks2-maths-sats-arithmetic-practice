@@ -10,6 +10,7 @@ import LongMultiplicationVisualizer from './components/visualizers/LongMultiplic
 import { Multiplication3NumbersVisualizer } from './components/visualizers/Multiplication3NumbersVisualizer';
 import ShortDivisionVisualizer from './components/visualizers/ShortDivisionVisualizer';
 import LongDivisionVisualizer from './components/visualizers/LongDivisionVisualizer';
+import DivisionKnownFactsVisualizer from './components/visualizers/DivisionKnownFactsVisualizer';
 import WorkingOutCanvas from './components/WorkingOutCanvas';
 
 // --- Icons ---
@@ -220,6 +221,9 @@ const StepByStepGuidancePanel: React.FC<{
             )}
             {question.type === QuestionType.LongDivision && (
               <LongDivisionVisualizer question={question} stepIndex={stepIndex} />
+            )}
+            {question.type === QuestionType.DivisionWithKnownFacts && (
+              <DivisionKnownFactsVisualizer question={question} stepIndex={stepIndex} />
             )}
           </div>
         </div>
