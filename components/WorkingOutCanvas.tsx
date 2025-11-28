@@ -12,6 +12,19 @@ const WorkingOutCanvas: React.FC<WorkingOutCanvasProps> = ({ isVisible, onClose,
     const [isDrawing, setIsDrawing] = useState(false);
     const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
+    const [selectedColor, setSelectedColor] = useState('#000000');
+
+    // Color palette for the swatches
+    const colors = [
+        '#000000', // Black
+        '#EF4444', // Red
+        '#3B82F6', // Blue
+        '#10B981', // Green
+        '#F59E0B', // Orange
+        '#8B5CF6', // Purple
+        '#EC4899', // Pink
+        '#14B8A6', // Teal
+    ];
 
     // Initialize canvas context once
     useEffect(() => {
@@ -21,11 +34,11 @@ const WorkingOutCanvas: React.FC<WorkingOutCanvasProps> = ({ isVisible, onClose,
                 renderCtx.lineCap = 'round';
                 renderCtx.lineJoin = 'round';
                 renderCtx.lineWidth = 3;
-                renderCtx.strokeStyle = '#000000';
+                renderCtx.strokeStyle = selectedColor;
                 setContext(renderCtx);
             }
         }
-    }, [context]);
+    }, [context, selectedColor]);
 
     // Size canvas when first shown
     useEffect(() => {
@@ -38,11 +51,11 @@ const WorkingOutCanvas: React.FC<WorkingOutCanvasProps> = ({ isVisible, onClose,
             context.lineCap = 'round';
             context.lineJoin = 'round';
             context.lineWidth = 3;
-            context.strokeStyle = '#000000';
+            context.strokeStyle = selectedColor;
 
             setIsInitialized(true);
         }
-    }, [isVisible, context, isInitialized]);
+    }, [isVisible, context, isInitialized, selectedColor]);
 
     // Clear canvas when question changes
     const clearCanvas = () => {
@@ -57,6 +70,13 @@ const WorkingOutCanvas: React.FC<WorkingOutCanvasProps> = ({ isVisible, onClose,
             setIsInitialized(false); // Reset initialization for new question
         }
     }, [question]);
+
+    // Update stroke color when selected color changes
+    useEffect(() => {
+        if (context) {
+            context.strokeStyle = selectedColor;
+        }
+    }, [selectedColor, context]);
 
     // Drawing handlers
     const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
@@ -115,7 +135,24 @@ const WorkingOutCanvas: React.FC<WorkingOutCanvasProps> = ({ isVisible, onClose,
                             </div>
                         )}
                     </div>
-                    <div className="flex gap-3">
+
+                    {/* Color Swatches */}
+                    <div className="flex items-center gap-3">
+                        <div className="flex gap-2 bg-white/20 p-2 rounded-xl">
+                            {colors.map((color) => (
+                                <button
+                                    key={color}
+                                    onClick={() => setSelectedColor(color)}
+                                    className={`w-8 h-8 rounded-full transition-all hover:scale-110 ${selectedColor === color
+                                            ? 'ring-4 ring-white shadow-lg scale-110'
+                                            : 'ring-2 ring-white/50'
+                                        }`}
+                                    style={{ backgroundColor: color }}
+                                    title={`Select ${color}`}
+                                />
+                            ))}
+                        </div>
+
                         <button
                             onClick={clearCanvas}
                             className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl font-bold transition-colors text-sm"
