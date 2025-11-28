@@ -367,17 +367,20 @@ const generateBIDMAS = (): Question => {
     return { type: QuestionType.BIDMAS, text: `${num1} + ${num2} × ${num3} =`, answer: answer.toString() };
 };
 
-const generateMultiplyDivideByPowersOf10 = (): Question => {
-    const isMultiply = Math.random() < 0.5;
+const generateMultiplyByPowersOf10 = (): Question => {
     const power = [10, 100, 1000][randomInt(0, 2)];
     const num = parseFloat((Math.random() * 99 + 1).toFixed(randomInt(1, 2)));
-    if (isMultiply) {
-        const answer = num * power;
-        return { type: QuestionType.MultiplyBy10_100_1000, text: `${num} × ${power} =`, answer: answer.toString() };
-    } else {
-        const answer = num / power;
-        return { type: QuestionType.DivideBy10_100_1000, text: `${num} ÷ ${power} =`, answer: answer.toString() };
-    }
+    const answer = num * power;
+    const sanitizedAnswer = parseFloat(answer.toFixed(10)).toString();
+    return { type: QuestionType.MultiplyBy10_100_1000, text: `${num} × ${power} =`, answer: sanitizedAnswer };
+};
+
+const generateDivideByPowersOf10 = (): Question => {
+    const power = [10, 100, 1000][randomInt(0, 2)];
+    const num = parseFloat((Math.random() * 99 + 1).toFixed(randomInt(1, 2)));
+    const answer = num / power;
+    const sanitizedAnswer = parseFloat(answer.toFixed(10)).toString();
+    return { type: QuestionType.DivideBy10_100_1000, text: `${num} ÷ ${power} =`, answer: sanitizedAnswer };
 };
 
 const generatePlaceValue = (): Question => {
@@ -428,8 +431,8 @@ const generators: Record<QuestionType, () => Question> = {
     [QuestionType.DivisionWithKnownFacts]: generateDivisionWithKnownFacts,
     [QuestionType.BIDMAS]: generateBIDMAS,
     [QuestionType.PlaceValue]: generatePlaceValue,
-    [QuestionType.MultiplyBy10_100_1000]: generateMultiplyDivideByPowersOf10,
-    [QuestionType.DivideBy10_100_1000]: generateMultiplyDivideByPowersOf10, // Uses same generator
+    [QuestionType.MultiplyBy10_100_1000]: generateMultiplyByPowersOf10,
+    [QuestionType.DivideBy10_100_1000]: generateDivideByPowersOf10,
     [QuestionType.PowersIndices]: generatePowersIndices,
     [QuestionType.DecimalAddition]: generateDecimalAddition,
     [QuestionType.DecimalSubtraction]: generateDecimalSubtraction,

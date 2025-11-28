@@ -173,14 +173,77 @@ const getDivisionWithKnownFactsExplanation = (q: Question): string[] => {
 };
 
 const getBIDMASExplanation = (q: Question): string[] => {
-    const [, num2, num3] = getOperands(q, 3);
-    const multResult = parseInt(num2) * parseInt(num3);
-    return [
-        `**Remember BIDMAS!** The order of operations is crucial. BIDMAS stands for: **B**rackets, **I**ndices, **D**ivision, **M**ultiplication, **A**ddition, **S**ubtraction.`,
-        `**Scan the question.** Our question is: **${q.text.replace('=', '')}**. It has Addition (+) and Multiplication (×).`,
-        `**Apply BIDMAS.** According to BIDMAS, Multiplication comes before Addition. So, we must do the multiplication part first.`,
-        `**Calculate.** First, calculate **${num2} × ${num3} = ${multResult}**. Now the problem becomes a simple addition. Finally, add the remaining number to get the final answer: **${q.answer}**.`
-    ];
+
+    const metadata = q.bidmasMetadata;
+
+    if (!metadata) {
+        // Fallback for old-style questions
+        const [, num2, num3] = getOperands(q, 3);
+        const multResult = parseInt(num2) * parseInt(num3);
+        return [
+            `**Remember BIDMAS!** The order of operations is crucial. BIDMAS stands for: **B**rackets, **I**ndices, **D**ivision, **M**ultiplication, **A**ddition, **S**ubtraction.`,
+            `**Scan the question.** Our question is: **${q.text.replace('=', '')}**. It has Addition (+) and Multiplication (×).`,
+            `**Apply BIDMAS.** According to BIDMAS, Multiplication comes before Addition. So, we must do the multiplication part first.`,
+            `**Calculate.** First, calculate **${num2} × ${num3} = ${multResult}**. Now the problem becomes a simple addition. Finally, add the remaining number to get the final answer: **${q.answer}**.`
+        ];
+    }
+    // Dynamic explanation based on metadata
+    const steps: string[] = [];
+
+    // Step 1: Explain BIDMAS
+    steps.push(`**Remember BIDMAS!** The order of operations is crucial. BIDMAS stands for: **B**rackets, **I**ndices, **D**ivision, **M**ultiplication, **A**ddition, **S**ubtraction.`);
+
+    // Step 2: Scan the question
+    const uniqueOps = Array.from(new Set(metadata.operations));
+    const arithmeticOps = uniqueOps.filter(op => op !== 'indices' && op !== 'brackets');
+
+    const featureList = arithmeticOps.map(op => {
+        switch (op) {
+            case '+': return 'Addition (+)';
+            case '-': return 'Subtraction (−)';
+            case '×': return 'Multiplication (×)';
+            case '÷': return 'Division (÷)';
+            default: return op;
+        }
+    });
+
+    if (metadata.hasIndices) featureList.push('Indices');
+    if (metadata.hasBrackets) featureList.push('Brackets ()');
+
+    const featuresText = featureList.length > 1
+        ? featureList.slice(0, -1).join(', ') + ' and ' + featureList.slice(-1)
+        : featureList[0];
+
+    const questionText = q.text.replace('=', '').trim();
+    steps.push(`**Scan the question.** Our question is: **${questionText}**. It has ${featuresText}.`);
+
+    // Step 3: Apply BIDMAS
+    const firstOp = metadata.executionSteps[0]?.operation;
+    let bidmasRule = '';
+    if (metadata.hasBrackets) {
+        bidmasRule = 'Brackets come first in BIDMAS';
+    } else if (metadata.hasIndices) {
+        bidmasRule = 'Indices come before other operations';
+    } else if (firstOp === '×' || firstOp === '÷') {
+        bidmasRule = 'Multiplication and Division come before Addition and Subtraction';
+    }
+    steps.push(`**Apply BIDMAS.** According to BIDMAS, ${bidmasRule}. ${metadata.executionSteps.length > 1 && (firstOp === '×' || firstOp === '÷') && (metadata.operations.includes('+') || metadata.operations.includes('-')) ? 'So, we must do the multiplication/division parts first.' : ''}`);
+
+    // Step 4: Calculate
+    let calcExplanation = '**Calculate.** ';
+    metadata.executionSteps.forEach((step, idx) => {
+        if (idx === 0) {
+            calcExplanation += `First, calculate **${step.operands[0]} ${step.operation} ${step.operands[1]} = ${step.result}**. `;
+        } else if (idx === metadata.executionSteps.length - 1) {
+            calcExplanation += `Finally, **${step.operands[0]} ${step.operation} ${step.operands[1]} = ${step.result}**. `;
+        } else {
+            calcExplanation += `Then, **${step.operands[0]} ${step.operation} ${step.operands[1]} = ${step.result}**. `;
+        }
+    });
+    calcExplanation += `The final answer is **${q.answer}**.`;
+    steps.push(calcExplanation);
+
+    return steps;
 };
 
 const getPlaceValueExplanation = (q: Question): string[] => {
@@ -196,22 +259,31 @@ const getPlaceValueExplanation = (q: Question): string[] => {
 const getMultiplyBy10_100_1000Explanation = (q: Question): string[] => {
     const [num, power] = getOperands(q);
     const zeros = (power.match(/0/g) || []).length;
+
+    // Fix floating point precision issues (e.g. 38.26 * 10 -> 382.59999999999997)
+    // We round to 10 decimal places and then parse back to remove trailing zeros
+    const displayAnswer = parseFloat(Number(q.answer).toFixed(10)).toString();
+
     return [
         `**Identify the operation.** We are multiplying by **${power}**, so we need to make the number **${num}** bigger. The key is that the digits move, not the decimal point.`,
         `**Count the zeros.** The number **${power}** has **${zeros}** zero(s). This tells us how many places to move the digits.`,
         `**Move the digits to the LEFT.** Every digit in **${num}** shifts **${zeros}** place(s) to the left. The ones digit moves to the tens column, the tenths digit moves to the ones column, and so on.`,
-        `**Final Answer.** After shifting the digits, the new, larger number is **${q.answer}**.`
+        `**Final Answer.** After shifting the digits, the new, larger number is **${displayAnswer}**.`
     ];
 };
 
 const getDivideBy10_100_1000Explanation = (q: Question): string[] => {
     const [num, power] = getOperands(q);
     const zeros = (power.match(/0/g) || []).length;
+
+    // Fix floating point precision issues
+    const displayAnswer = parseFloat(Number(q.answer).toFixed(10)).toString();
+
     return [
         `**Identify the operation.** We are dividing by **${power}**, so we need to make the number **${num}** smaller. The key is that the digits move, not the decimal point.`,
         `**Count the zeros.** The number **${power}** has **${zeros}** zero(s). This tells us how many places to move the digits.`,
         `**Move the digits to the RIGHT.** Every digit in **${num}** shifts **${zeros}** place(s) to the right. The tens digit moves to the ones column, the ones digit moves to the tenths column, and so on. We may need to add placeholder zeros.`,
-        `**Final Answer.** After shifting the digits, the new, smaller number is **${q.answer}**.`
+        `**Final Answer.** After shifting the digits, the new, smaller number is **${displayAnswer}**.`
     ];
 };
 

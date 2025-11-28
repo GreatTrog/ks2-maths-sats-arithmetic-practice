@@ -11,6 +11,7 @@ import { Multiplication3NumbersVisualizer } from './components/visualizers/Multi
 import ShortDivisionVisualizer from './components/visualizers/ShortDivisionVisualizer';
 import LongDivisionVisualizer from './components/visualizers/LongDivisionVisualizer';
 import DivisionKnownFactsVisualizer from './components/visualizers/DivisionKnownFactsVisualizer';
+import BIDMASVisualizer from './components/visualizers/BIDMASVisualizer';
 import WorkingOutCanvas from './components/WorkingOutCanvas';
 
 // --- Icons ---
@@ -42,7 +43,7 @@ const StarIcon = ({ filled }: { filled: boolean }) => (
 
 const PracticeTracker: React.FC<{ count: number }> = ({ count }) => (
   <div className="flex space-x-3 justify-center mb-4">
-    {[1, 2, 3].map((i) => (
+    {[1, 2, 3, 4, 5].map((i) => (
       <div key={i} className="transform transition-transform hover:scale-110">
         <StarIcon filled={i <= count} />
       </div>
@@ -224,6 +225,9 @@ const StepByStepGuidancePanel: React.FC<{
             )}
             {question.type === QuestionType.DivisionWithKnownFacts && (
               <DivisionKnownFactsVisualizer question={question} stepIndex={stepIndex} />
+            )}
+            {question.type === QuestionType.BIDMAS && (
+              <BIDMASVisualizer question={question} stepIndex={stepIndex} />
             )}
           </div>
         </div>
@@ -512,7 +516,7 @@ export default function App() {
         const newCount = practiceState.correctInARow + 1;
         setPracticeState({ ...practiceState, correctInARow: newCount });
 
-        if (newCount >= 3) {
+        if (newCount >= 5) {
           // Mastery achieved!
           setTimeout(() => {
             setShowMasteryPopup(true);
@@ -587,7 +591,7 @@ export default function App() {
         <div className="w-full max-w-2xl mx-auto bg-white/80 backdrop-blur p-6 rounded-3xl shadow-xl mb-8 border-4 border-blue-200 animate-fade-in">
           <h3 className="text-xl font-bold text-primary text-center mb-4">Practice Zone: {practiceState.type}</h3>
           <PracticeTracker count={practiceState.correctInARow} />
-          <p className="text-center text-base text-gray-600 mt-3 font-medium">Get 3 stars to unlock a new topic! ⭐⭐⭐</p>
+          <p className="text-center text-base text-gray-600 mt-3 font-medium">Get 5 stars to unlock a new topic! ⭐⭐⭐⭐⭐</p>
           <div className="mt-6 text-center">
             <p className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">Timer per question</p>
             <div className="flex flex-wrap justify-center gap-3">

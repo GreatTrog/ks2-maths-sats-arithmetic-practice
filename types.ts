@@ -34,18 +34,33 @@ export enum QuestionType {
   FractionMultiplicationMixedNumbers = 'Fraction Multiplication (mixed numbers)',
   FractionDivision = 'Fraction Division (by whole number)',
   FractionsOfAmounts = 'Fractions of Amounts',
-  
+
   // Percentages
   Percentages = 'Percentages of Amounts',
+}
+
+export interface BidmasStep {
+  expression: string;
+  activeExpression?: string; // The specific part being calculated, e.g. "(10 + 2)"
+  operation: string;
+  operands: string[];
+  result: string;
+}
+
+export interface BidmasMetadata {
+  operations: string[];
+  executionSteps: BidmasStep[];
+  hasBrackets: boolean;
+  hasIndices: boolean;
 }
 
 export interface Question {
   type: QuestionType;
   text: string;
-  subText?: string;
+  answer: string;
   operands?: string[];
   operator?: string;
-  answer: string;
+  bidmasMetadata?: BidmasMetadata;
 }
 
 export interface PracticeState {
