@@ -52,9 +52,11 @@ const PracticeTracker: React.FC<{ count: number }> = ({ count }) => (
 );
 
 const QuestionDisplay: React.FC<{ question: Question }> = ({ question }) => {
+  const isPlaceValue = question.type === QuestionType.PlaceValue;
+
   return (
     <div className="text-center">
-      <div className="text-5xl md:text-7xl font-black text-gray-800 tracking-tight mb-4 font-mono">
+      <div className={`${isPlaceValue ? 'text-lg md:text-lg' : 'text-5xl md:text-7xl'} font-black text-gray-800 tracking-tight mb-4 font-mono`}>
         {question.text}
       </div>
       {question.type.includes('Fraction') && (
