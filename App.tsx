@@ -416,7 +416,7 @@ export default function App() {
 
   const startPracticeQuestion = useCallback(() => {
     if (practiceState) {
-      const newQ = generateQuestionByType(practiceState.type);
+      const newQ = generateQuestionByType(practiceState.type, practiceState.correctInARow);
       resetForNewQuestion(newQ);
     } else {
       // If no practice state (e.g. All Topics), generate a random new question

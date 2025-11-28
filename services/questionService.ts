@@ -352,8 +352,26 @@ const generateDecimalMultiplication = (): Question => {
     return { type: QuestionType.DecimalMultiplication, text: `${num1} × ${num2} =`, answer: answer.toString() };
 };
 
-const generatePercentages = (): Question => {
-    const percentage = [10, 20, 25, 50, 75][randomInt(0, 4)];
+const generatePercentages = (difficulty: number = 0): Question => {
+    let percentage: number;
+
+    // Progressive difficulty based on correctInARow count (max 5 in practice zone)
+    if (difficulty < 1) {
+        // First question: Easy percentages (10, 20, 25, 50, 75)
+        percentage = [10, 20, 25, 50, 75][randomInt(0, 4)];
+    } else if (difficulty < 2) {
+        // Question 2: Multiples of 10% (10, 20, 30, 40, 50, 60, 70, 80, 90)
+        percentage = randomInt(2, 9) * 10;
+    } else if (difficulty < 3) {
+        // Questions 3-4: Multiples of 5% (5, 10, 15, 20, ..., 95)
+        percentage = randomInt(3, 19) * 5;
+    } else {
+        // Question 5 (4-5 stars): Any multiple of 1% (1-99)
+        do {
+            percentage = randomInt(1, 99);
+        } while (percentage % 5 === 0);
+    }
+
     const num = randomInt(2, 20) * 10;
     const answer = (percentage / 100) * num;
     return { type: QuestionType.Percentages, text: `${percentage}% of ${num} =`, answer: answer.toString() };
@@ -461,7 +479,12 @@ export const generateNewQuestion = (excludeType?: QuestionType): Question => {
     return generators[randomType]();
 };
 
-export const generateQuestionByType = (type: QuestionType): Question => {
+export const generateQuestionByType = (type: QuestionType, difficulty: number = 0): Question => {
+    // Special handling for Percentages with difficulty
+    if (type === QuestionType.Percentages) {
+        return generatePercentages(difficulty);
+    }
+
     // Handle the case where two enums point to the same generator
     if (type === QuestionType.DivideBy10_100_1000) {
         // We need to ensure a division question is generated
@@ -472,4 +495,4 @@ export const generateQuestionByType = (type: QuestionType): Question => {
         return q;
     }
     return generators[type]();
-}
+};
