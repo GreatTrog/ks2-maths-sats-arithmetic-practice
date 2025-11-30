@@ -330,11 +330,14 @@ const getDecimalMultiplicationExplanation = (q: Question): string[] => {
     const [num1, num2] = getOperands(q);
     const decimalPlaces = (num1.split('.')[1] || '').length;
     const num1AsInt = num1.replace('.', '');
+    const intResult = (parseInt(num1AsInt) * parseInt(num2)).toString();
+
     return [
         `**Ignore the decimal point.** First, pretend the decimal point in **${num1}** isn't there. This turns the problem into a simpler whole number multiplication: **${num1AsInt} × ${num2}**.`,
-        `**Solve the whole number problem.** Calculate **${num1AsInt} × ${num2}**. Let's say you get an answer.`,
-        `**Put the decimal point back.** Now, count how many decimal places were in the original numbers. **${num1}** has **${decimalPlaces}** digit(s) after the decimal point. So, your final answer must also have **${decimalPlaces}** digit(s) after its decimal point.`,
-        `**Final Answer.** Place the decimal point in the correct spot. The final answer is **${q.answer}**.`
+        `**Multiply the ones.** Start by multiplying the ones digit of **${num1AsInt}** by **${num2}**.`,
+        `**Multiply the tens.** Next, multiply the tens digit of **${num1AsInt}** by **${num2}**, adding any carried digits.`,
+        `**Check the whole number answer.** You should get **${intResult}** as the answer to the whole number problem.`,
+        `**Place the decimal point.** Finally, count the decimal places. **${num1}** has **${decimalPlaces}** decimal place(s), so move the digits **${decimalPlaces}** place(s) to the right to get **${q.answer}**.`
     ];
 };
 
