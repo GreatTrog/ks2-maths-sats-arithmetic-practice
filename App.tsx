@@ -53,10 +53,19 @@ const PracticeTracker: React.FC<{ count: number }> = ({ count }) => (
 
 const QuestionDisplay: React.FC<{ question: Question }> = ({ question }) => {
   const isPlaceValue = question.type === QuestionType.PlaceValue;
+  const isBidmas = question.type === QuestionType.BIDMAS;
 
   return (
     <div className="text-center">
-      <div className={`${isPlaceValue ? 'text-lg md:text-lg' : 'text-5xl md:text-7xl'} font-black text-gray-800 tracking-tight mb-4 font-mono`}>
+      <div
+        className={`${
+          isPlaceValue
+            ? 'text-lg md:text-lg'
+            : isBidmas
+            ? 'text-3xl md:text-5xl'   // adjust these sizes as you like
+            : 'text-5xl md:text-7xl'
+        } font-black text-gray-800 tracking-tight mb-4 font-mono`}
+      >
         {question.text}
       </div>
       {question.type.includes('Fraction') && (

@@ -378,11 +378,141 @@ const generatePercentages = (difficulty: number = 0): Question => {
 };
 
 const generateBIDMAS = (): Question => {
-    const num1 = randomInt(10, 50);
-    const num2 = randomInt(2, 10);
-    const num3 = randomInt(2, 10);
-    const answer = num1 + (num2 * num3);
-    return { type: QuestionType.BIDMAS, text: `${num1} + ${num2} × ${num3} =`, answer: answer.toString() };
+  const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+  const SQUARE_CHAR = '²';
+  const toPowerToken = (base: number) => `${base}${SQUARE_CHAR}`;
+
+  while (true) {
+    const opPool: string[] = ['+', '-', '×', '÷', 'pow'];
+    const uniqueOps = new Set<string>();
+    while (uniqueOps.size < 2) uniqueOps.add(pick(opPool));
+    const allowedOps = Array.from(uniqueOps);
+
+    // Exactly two operations (three operands)
+    const opSeq: string[] = [pick(allowedOps), pick(allowedOps)];
+
+    const powCount = opSeq.filter(op => op === 'pow').length;
+    // If any power is present, only one is allowed and the other op must be + or -
+    if (powCount > 1) continue;
+    if (powCount === 1 && opSeq.some(op => op !== 'pow' && op !== '+' && op !== '-')) continue;
+
+    if (opSeq.filter(op => op === '÷').length > 1) continue; // at most one division
+
+    const a = randomInt(2, 12);
+    const b = randomInt(2, 12);
+    const c = randomInt(2, 12);
+
+    const firstOperand = opSeq[0] === 'pow' ? toPowerToken(a) : a.toString();
+    const secondOperand = b.toString();
+    const thirdOperand = opSeq[1] === 'pow' ? toPowerToken(c) : c.toString();
+
+    const wrapFirst = opSeq[0] !== 'pow' && Math.random() < 0.35;
+
+    const tokens: string[] = [];
+    if (wrapFirst) tokens.push('(');
+    tokens.push(firstOperand, opSeq[0] === 'pow' ? '×' : opSeq[0], secondOperand);
+    if (wrapFirst) tokens.push(')');
+    tokens.push(opSeq[1] === 'pow' ? '×' : opSeq[1], thirdOperand);
+
+    const textExpr = tokens.join(' ');
+
+    const parseTokens = (expr: string): string[] =>
+      expr.match(/(\d+[²]?|\(|\)|[+\-×÷])/g) || [];
+    const isPowTok = (tok: string) => tok.endsWith(SQUARE_CHAR);
+    const powBase = (tok: string) => parseInt(tok.slice(0, -1), 10);
+
+    const bidmasSteps: any[] = [];
+    const applyOp = (aVal: number, op: string, bVal: number) => {
+      switch (op) {
+        case '+': return aVal + bVal;
+        case '-': return aVal - bVal;
+        case '×': return aVal * bVal;
+        case '÷': return aVal / bVal;
+        default: return NaN;
+      }
+    };
+
+    const resolve = (toks: string[]): number => {
+      while (toks.includes('(')) {
+        const close = toks.indexOf(')');
+        let open = close - 1;
+        while (open >= 0 && toks[open] !== '(') open--;
+        const inner = toks.slice(open + 1, close);
+        const val = resolve(inner);
+        bidmasSteps.push({
+          expression: toks.join(' '),
+          activeExpression: inner.join(' '),
+          operation: '()',
+          operands: [inner.join(' ')],
+          result: val.toString(),
+        });
+        toks.splice(open, close - open + 1, val.toString());
+      }
+
+      let i = 0;
+      while (i < toks.length) {
+        if (isPowTok(toks[i])) {
+          const base = powBase(toks[i]);
+          const res = Math.pow(base, 2);
+          bidmasSteps.push({
+            expression: toks.join(' '),
+            activeExpression: toks[i],
+            operation: '^',
+            operands: [base.toString(), '2'],
+            result: res.toString(),
+          });
+          toks.splice(i, 1, res.toString());
+          i = Math.max(i - 1, 0);
+        } else {
+          i++;
+        }
+      }
+
+      const resolveGroup = (group: string[]) => {
+        let j = 0;
+        while (j < toks.length) {
+          const op = toks[j];
+          if (!group.includes(op)) { j++; continue; }
+          const left = parseFloat(toks[j - 1]);
+          const right = parseFloat(toks[j + 1]);
+          const res = applyOp(left, op, right);
+          const active = `${toks[j - 1]} ${op} ${toks[j + 1]}`;
+          bidmasSteps.push({
+            expression: toks.join(' '),
+            activeExpression: active,
+            operation: op,
+            operands: [toks[j - 1], toks[j + 1]],
+            result: res.toString(),
+          });
+          toks.splice(j - 1, 3, res.toString());
+          j = Math.max(j - 1, 0);
+        }
+      };
+
+      resolveGroup(['×', '÷']);
+      resolveGroup(['+', '-']);
+      return parseFloat(toks[0]);
+    };
+
+    const result = resolve(parseTokens(textExpr));
+    const hasNonIntegerDivision = bidmasSteps.some(
+      (step) => step.operation === '÷' && !Number.isInteger(Number(step.result))
+    );
+
+    if (!Number.isFinite(result) || result < 0 || hasNonIntegerDivision) continue;
+
+    return {
+      type: QuestionType.BIDMAS,
+      text: `${textExpr} =`,
+      answer: result.toString(),
+      bidmasMetadata: {
+        operations: opSeq.map(op => op === 'pow' ? '^' : op),
+        executionSteps: bidmasSteps,
+        hasBrackets: wrapFirst,
+        hasIndices: opSeq.includes('pow'),
+      }
+    };
+  }
 };
 
 const generateMultiplyByPowersOf10 = (): Question => {
