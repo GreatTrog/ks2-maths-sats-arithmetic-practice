@@ -13,6 +13,7 @@ import LongDivisionVisualizer from './components/visualizers/LongDivisionVisuali
 import DivisionKnownFactsVisualizer from './components/visualizers/DivisionKnownFactsVisualizer';
 import MultiplyByPowersOfTenVisualizer from './components/visualizers/MultiplyByPowersOfTenVisualizer';
 import DivideByPowersOfTenVisualizer from './components/visualizers/DivideByPowersOfTenVisualizer';
+import PowersIndicesVisualizer from './components/visualizers/PowersIndicesVisualizer';
 import BIDMASVisualizer from './components/visualizers/BIDMASVisualizer';
 import WorkingOutCanvas from './components/WorkingOutCanvas';
 
@@ -246,6 +247,9 @@ const StepByStepGuidancePanel: React.FC<{
             )}
             {question.type === QuestionType.DivideBy10_100_1000 && (
               <DivideByPowersOfTenVisualizer question={question} stepIndex={stepIndex} />
+            )}
+            {question.type === QuestionType.PowersIndices && (
+              <PowersIndicesVisualizer question={question} />
             )}
           </div>
         </div>
