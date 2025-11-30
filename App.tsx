@@ -12,6 +12,7 @@ import ShortDivisionVisualizer from './components/visualizers/ShortDivisionVisua
 import LongDivisionVisualizer from './components/visualizers/LongDivisionVisualizer';
 import DivisionKnownFactsVisualizer from './components/visualizers/DivisionKnownFactsVisualizer';
 import MultiplyByPowersOfTenVisualizer from './components/visualizers/MultiplyByPowersOfTenVisualizer';
+import DivideByPowersOfTenVisualizer from './components/visualizers/DivideByPowersOfTenVisualizer';
 import BIDMASVisualizer from './components/visualizers/BIDMASVisualizer';
 import WorkingOutCanvas from './components/WorkingOutCanvas';
 
@@ -60,10 +61,10 @@ const QuestionDisplay: React.FC<{ question: Question }> = ({ question }) => {
     <div className="text-center">
       <div
         className={`${isPlaceValue
-            ? 'text-lg md:text-lg'
-            : isBidmas
-              ? 'text-3xl md:text-5xl'   // adjust these sizes as you like
-              : 'text-5xl md:text-7xl'
+          ? 'text-lg md:text-lg'
+          : isBidmas
+            ? 'text-3xl md:text-5xl'   // adjust these sizes as you like
+            : 'text-5xl md:text-7xl'
           } font-black text-gray-800 tracking-tight mb-4 font-mono`}
       >
         {question.text}
@@ -242,6 +243,9 @@ const StepByStepGuidancePanel: React.FC<{
             )}
             {question.type === QuestionType.MultiplyBy10_100_1000 && (
               <MultiplyByPowersOfTenVisualizer question={question} stepIndex={stepIndex} />
+            )}
+            {question.type === QuestionType.DivideBy10_100_1000 && (
+              <DivideByPowersOfTenVisualizer question={question} stepIndex={stepIndex} />
             )}
           </div>
         </div>

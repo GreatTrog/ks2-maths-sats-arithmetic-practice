@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { Question } from '../../types';
 
-interface MultiplyByPowersOfTenVisualizerProps {
+interface DivideByPowersOfTenVisualizerProps {
     question: Question;
     stepIndex: number;
 }
@@ -18,22 +18,25 @@ const PLACE_VALUES = [
     { label: 't', value: 0.1, color: 'bg-yellow-200 border-yellow-400' },
     { label: 'h', value: 0.01, color: 'bg-orange-200 border-orange-400' },
     { label: 'th', value: 0.001, color: 'bg-red-200 border-red-400' },
+    { label: 'tth', value: 0.0001, color: 'bg-pink-200 border-pink-400' },
+    { label: 'hth', value: 0.00001, color: 'bg-rose-200 border-rose-400' },
+    { label: 'mth', value: 0.000001, color: 'bg-slate-200 border-slate-400' },
 ];
 
-const MultiplyByPowersOfTenVisualizer: React.FC<MultiplyByPowersOfTenVisualizerProps> = ({ question, stepIndex }) => {
+const DivideByPowersOfTenVisualizer: React.FC<DivideByPowersOfTenVisualizerProps> = ({ question, stepIndex }) => {
     // Parse question
-    const { startNum, multiplier, resultNum } = useMemo(() => {
+    const { startNum, divisor, resultNum } = useMemo(() => {
         const parts = question.text.split(' ');
         const start = parseFloat(parts[0]);
-        const mult = parseFloat(parts[2]);
+        const div = parseFloat(parts[2]);
         const res = parseFloat(question.answer);
-        return { startNum: start, multiplier: mult, resultNum: res };
+        return { startNum: start, divisor: div, resultNum: res };
     }, [question]);
 
-    // Determine shift amount (log10 of multiplier)
+    // Determine shift amount (log10 of divisor)
     const shiftAmount = useMemo(() => {
-        return Math.log10(multiplier);
-    }, [multiplier]);
+        return Math.log10(divisor);
+    }, [divisor]);
 
     // Determine active columns
     const activeColumns = useMemo(() => {
@@ -49,16 +52,14 @@ const MultiplyByPowersOfTenVisualizer: React.FC<MultiplyByPowersOfTenVisualizerP
         const minVal = Math.pow(0.1, maxDecimals);
 
         // Find the largest place value needed
-        // e.g. 4520 -> 1000
-        const maxPlace = Math.pow(10, Math.floor(Math.log10(maxVal || 1)));
+        // Ensure we at least show the Ones column (value 1)
+        const maxPlace = Math.max(1, Math.pow(10, Math.floor(Math.log10(maxVal || 1))));
         // Find smallest place value needed
         const minPlace = Math.pow(10, -maxDecimals);
 
         return PLACE_VALUES.filter(pv => {
             if (pv.label === '•') return maxDecimals > 0; // Only show decimal point if decimals exist
-            // Include columns between maxPlace*10 (for safety/carry) and minPlace
-            // But strictly, we just need to cover the range.
-            return pv.value <= maxPlace * 10 && pv.value >= minPlace;
+            return pv.value <= maxPlace && pv.value >= minPlace;
         });
     }, [startNum, resultNum]);
 
@@ -109,7 +110,7 @@ const MultiplyByPowersOfTenVisualizer: React.FC<MultiplyByPowersOfTenVisualizerP
 
     const getShiftPx = (colValue: number) => {
         const currentIdx = activeColumns.findIndex(c => c.value === colValue);
-        const targetValue = colValue * multiplier;
+        const targetValue = colValue / divisor; // Divide for division
         // Find closest column for target (floating point safety)
         const targetIdx = activeColumns.findIndex(c => Math.abs(c.value - targetValue) < 0.00001);
 
@@ -126,8 +127,8 @@ const MultiplyByPowersOfTenVisualizer: React.FC<MultiplyByPowersOfTenVisualizerP
         const targetCenter = targetX + getColumnWidth(activeColumns[targetIdx].label) / 2;
 
         // Return difference (target - current). 
-        // Since we are moving left (to higher place values), and higher place values are at lower indices (left side),
-        // targetX should be smaller than currentX, resulting in a negative value, which is correct for translateX left.
+        // Moving right (to smaller place values) means moving to higher indices in the array.
+        // So targetX > currentX. Result is positive.
         return targetCenter - currentCenter;
     };
 
@@ -149,7 +150,8 @@ const MultiplyByPowersOfTenVisualizer: React.FC<MultiplyByPowersOfTenVisualizerP
 
                     // Check if this column is a placeholder zero in the result
                     // It is a placeholder if it wasn't present in startDigits (shifted) but is 0 in resultDigits
-                    const isPlaceholder = animState === 'final' && finalDigit === 0 && !startDigits[col.value / multiplier];
+                    // For division: did it come from col.value * divisor?
+                    const isPlaceholder = animState === 'final' && finalDigit === 0 && !startDigits[col.value * divisor];
                     const showPlaceholderRed = isPlaceholder;
 
                     const shiftPx = getShiftPx(col.value);
@@ -195,6 +197,9 @@ const MultiplyByPowersOfTenVisualizer: React.FC<MultiplyByPowersOfTenVisualizerP
                                             if (digitHere !== undefined) return digitHere;
 
                                             if (isWholeColumn) {
+                                                // For division, we might have 0.04. Ones column is 0.
+                                                // resultNum < 1 means we need leading zero in Ones.
+                                                if (col.value === 1 && resultNum < 1) return 0;
                                                 return col.value < resultNum ? 0 : '';
                                             }
 
@@ -210,11 +215,11 @@ const MultiplyByPowersOfTenVisualizer: React.FC<MultiplyByPowersOfTenVisualizerP
 
             <div className="mt-4 text-center text-gray-500 font-medium">
                 {animState === 'initial' && "Represent the number with counters..."}
-                {animState === 'moving' && `Multiply by ${multiplier}: Move digits ${shiftAmount} place${shiftAmount > 1 ? 's' : ''} left.`}
+                {animState === 'moving' && `Divide by ${divisor}: Move digits ${shiftAmount} place${shiftAmount > 1 ? 's' : ''} right.`}
                 {animState === 'final' && "Fill empty columns with placeholder zeros."}
             </div>
         </div>
     );
 };
 
-export default MultiplyByPowersOfTenVisualizer;
+export default DivideByPowersOfTenVisualizer;
