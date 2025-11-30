@@ -15,6 +15,7 @@ import MultiplyByPowersOfTenVisualizer from './components/visualizers/MultiplyBy
 import DivideByPowersOfTenVisualizer from './components/visualizers/DivideByPowersOfTenVisualizer';
 import PowersIndicesVisualizer from './components/visualizers/PowersIndicesVisualizer';
 import DecimalAdditionVisualizer from './components/visualizers/DecimalAdditionVisualizer';
+import FractionsOfAmountsVisualizer from './components/visualizers/FractionsOfAmountsVisualizer';
 import BIDMASVisualizer from './components/visualizers/BIDMASVisualizer';
 import WorkingOutCanvas from './components/WorkingOutCanvas';
 
@@ -81,6 +82,7 @@ const QuestionDisplay: React.FC<{ question: Question }> = ({ question }) => {
 };
 
 const FormattedText: React.FC<{ text: string }> = ({ text }) => {
+  // First split by bold markers
   const parts = text.split(/(\*\*.*?\*\*)/g);
   return (
     <span>
@@ -88,7 +90,18 @@ const FormattedText: React.FC<{ text: string }> = ({ text }) => {
         if (part.startsWith('**') && part.endsWith('**')) {
           return <strong key={i} className="font-bold text-primary">{part.slice(2, -2)}</strong>;
         }
-        return <span key={i}>{part}</span>;
+        // Now handle italics within non-bold parts
+        const italicParts = part.split(/(\*.*?\*)/g);
+        return (
+          <span key={i}>
+            {italicParts.map((iPart, j) => {
+              if (iPart.startsWith('*') && iPart.endsWith('*') && iPart.length > 2) {
+                return <em key={j} className="italic">{iPart.slice(1, -1)}</em>;
+              }
+              return <span key={j}>{iPart}</span>;
+            })}
+          </span>
+        );
       })}
     </span>
   );
@@ -254,6 +267,9 @@ const StepByStepGuidancePanel: React.FC<{
             )}
             {question.type === QuestionType.DecimalAddition && (
               <DecimalAdditionVisualizer question={question} stepIndex={stepIndex} />
+            )}
+            {question.type === QuestionType.FractionsOfAmounts && (
+              <FractionsOfAmountsVisualizer question={question} stepIndex={stepIndex} />
             )}
           </div>
         </div>
