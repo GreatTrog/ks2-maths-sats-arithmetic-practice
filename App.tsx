@@ -15,6 +15,7 @@ import MultiplyByPowersOfTenVisualizer from './components/visualizers/MultiplyBy
 import DivideByPowersOfTenVisualizer from './components/visualizers/DivideByPowersOfTenVisualizer';
 import PowersIndicesVisualizer from './components/visualizers/PowersIndicesVisualizer';
 import DecimalAdditionVisualizer from './components/visualizers/DecimalAdditionVisualizer';
+import DecimalSubtractionVisualizer from './components/visualizers/DecimalSubtractionVisualizer';
 import FractionsOfAmountsVisualizer from './components/visualizers/FractionsOfAmountsVisualizer';
 import BIDMASVisualizer from './components/visualizers/BIDMASVisualizer';
 import WorkingOutCanvas from './components/WorkingOutCanvas';
@@ -267,6 +268,9 @@ const StepByStepGuidancePanel: React.FC<{
             )}
             {question.type === QuestionType.DecimalAddition && (
               <DecimalAdditionVisualizer question={question} stepIndex={stepIndex} />
+            )}
+            {question.type === QuestionType.DecimalSubtraction && (
+              <DecimalSubtractionVisualizer question={question} stepIndex={stepIndex} />
             )}
             {question.type === QuestionType.FractionsOfAmounts && (
               <FractionsOfAmountsVisualizer question={question} stepIndex={stepIndex} />
