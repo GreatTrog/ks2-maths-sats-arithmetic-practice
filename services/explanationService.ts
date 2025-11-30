@@ -173,97 +173,97 @@ const getDivisionWithKnownFactsExplanation = (q: Question): string[] => {
 };
 
 const removeRedundantParens = (expr: string): string =>
-  expr.replace(/\(\s*([-+]?\d+(?:\.\d+)?)\s*\)/g, '$1').replace(/\s+/g, ' ').trim();
-
-const rewriteBIDMASExpression = (
-  expression: string,
-  target: string | undefined,
-  result: string,
-  _operation?: string,
-  ..._extra: unknown[]
-): string => {
-  if (!target) return expression.trim();
-
-  const removeRedundantParens = (expr: string): string =>
     expr.replace(/\(\s*([-+]?\d+(?:\.\d+)?)\s*\)/g, '$1').replace(/\s+/g, ' ').trim();
 
-  const expr = expression.trim();
-  const candidates = [target, `(${target})`, `( ${target} )`];
-  for (const candidate of candidates) {
-    const idx = expr.indexOf(candidate);
-    if (idx !== -1) {
-      const updated = `${expr.slice(0, idx)}${result}${expr.slice(idx + candidate.length)}`;
-      return removeRedundantParens(updated);
+const rewriteBIDMASExpression = (
+    expression: string,
+    target: string | undefined,
+    result: string,
+    _operation?: string,
+    ..._extra: unknown[]
+): string => {
+    if (!target) return expression.trim();
+
+    const removeRedundantParens = (expr: string): string =>
+        expr.replace(/\(\s*([-+]?\d+(?:\.\d+)?)\s*\)/g, '$1').replace(/\s+/g, ' ').trim();
+
+    const expr = expression.trim();
+    const candidates = [target, `(${target})`, `( ${target} )`];
+    for (const candidate of candidates) {
+        const idx = expr.indexOf(candidate);
+        if (idx !== -1) {
+            const updated = `${expr.slice(0, idx)}${result}${expr.slice(idx + candidate.length)}`;
+            return removeRedundantParens(updated);
+        }
     }
-  }
-  return expr;
+    return expr;
 };
 
 const getBIDMASExplanation = (q: Question): string[] => {
-  const metadata = q.bidmasMetadata;
+    const metadata = q.bidmasMetadata;
 
-  // Fallback for legacy BIDMAS questions without metadata
-  if (!metadata || !metadata.executionSteps || metadata.executionSteps.length === 0) {
-    const [, num2, num3] = getOperands(q, 3);
-    const multResult = parseInt(num2, 10) * parseInt(num3, 10);
-    const baseExpression = q.text.replace('=', '').trim();
-    const multiplicationPartMatch = baseExpression.match(new RegExp(`${num2}\\s*[^\\d]+\\s*${num3}`));
-    const multiplicationPart = multiplicationPartMatch ? multiplicationPartMatch[0] : `${num2} * ${num3}`;
-    const rewritten = baseExpression.replace(multiplicationPart, multResult.toString());
+    // Fallback for legacy BIDMAS questions without metadata
+    if (!metadata || !metadata.executionSteps || metadata.executionSteps.length === 0) {
+        const [, num2, num3] = getOperands(q, 3);
+        const multResult = parseInt(num2, 10) * parseInt(num3, 10);
+        const baseExpression = q.text.replace('=', '').trim();
+        const multiplicationPartMatch = baseExpression.match(new RegExp(`${num2}\\s*[^\\d]+\\s*${num3}`));
+        const multiplicationPart = multiplicationPartMatch ? multiplicationPartMatch[0] : `${num2} * ${num3}`;
+        const rewritten = baseExpression.replace(multiplicationPart, multResult.toString());
 
-    return [
-      `**Remember BIDMAS!** The order of operations is crucial: Brackets, Indices, Division, Multiplication, Addition, Subtraction.`,
-      `**Spot the first operation.** In **${baseExpression}**, tackle the multiplication first: **${multiplicationPart}**.`,
-      `**Rewrite after the first step.** Replace that part with its answer: **${rewritten}**.`,
-      `**Finish it off.** Now add the remaining number to get **${q.answer}**.`
-    ];
-  }
-
-  const steps: string[] = [];
-  const questionText = q.text.replace('=', '').trim();
-  const uniqueOps = Array.from(new Set(metadata.operations));
-  const featureList: string[] = [];
-
-  const isMultiplicationOp = (op: string) => ['×', 'x', '*'].includes(op);
-  const isDivisionOp = (op: string) => ['÷', '/'].includes(op);
-
-  if (metadata.hasBrackets) featureList.push('brackets');
-  if (metadata.hasIndices) featureList.push('indices');
-  uniqueOps.forEach((op) => {
-    if (op === '+') featureList.push('addition');
-    else if (op === '-') featureList.push('subtraction');
-    else if (isMultiplicationOp(op)) featureList.push('multiplication');
-    else if (isDivisionOp(op)) featureList.push('division');
-  });
-
-  const featuresText =
-    featureList.length > 1
-      ? featureList.slice(0, -1).join(', ') + ' and ' + featureList.slice(-1)
-      : featureList[0] || 'these operations';
-
-  steps.push(`**Remember BIDMAS!** We follow Brackets, Indices, Division/Multiplication, then Addition/Subtraction in that order.`);
-  steps.push(`**Scan the question.** ${questionText} includes ${featuresText}.`);
-
-  const isPureNumber = (expr: string) => expr.trim().match(/^-?\d+(\.\d+)?$/);
-
-  let runningExpression = questionText;
-  metadata.executionSteps.forEach((step, idx) => {
-    const activeExpr = step.activeExpression || `${step.operands[0]} ${step.operation} ${step.operands[1]}`;
-    // Skip noisy steps that only contain a single evaluated number
-    if (isPureNumber(activeExpr)) {
-      runningExpression = rewriteBIDMASExpression(runningExpression, activeExpr, step.result, step.operation);
-      return;
+        return [
+            `**Remember BIDMAS!** The order of operations is crucial: Brackets, Indices, Division, Multiplication, Addition, Subtraction.`,
+            `**Spot the first operation.** In **${baseExpression}**, tackle the multiplication first: **${multiplicationPart}**.`,
+            `**Rewrite after the first step.** Replace that part with its answer: **${rewritten}**.`,
+            `**Finish it off.** Now add the remaining number to get **${q.answer}**.`
+        ];
     }
-    const rewritten = rewriteBIDMASExpression(runningExpression, activeExpr, step.result, step.operation);
 
-    steps.push(`**Step ${idx + 1}:** Calculate **${activeExpr}**.`);
-    steps.push(`**Rewrite:** ${rewritten}`);
-    runningExpression = rewritten;
-  });
+    const steps: string[] = [];
+    const questionText = q.text.replace('=', '').trim();
+    const uniqueOps = Array.from(new Set(metadata.operations));
+    const featureList: string[] = [];
 
-  steps.push(`**All done.** After these steps, the equation simplifies to **${runningExpression}**.`);
+    const isMultiplicationOp = (op: string) => ['×', 'x', '*'].includes(op);
+    const isDivisionOp = (op: string) => ['÷', '/'].includes(op);
 
-  return steps;
+    if (metadata.hasBrackets) featureList.push('brackets');
+    if (metadata.hasIndices) featureList.push('indices');
+    uniqueOps.forEach((op) => {
+        if (op === '+') featureList.push('addition');
+        else if (op === '-') featureList.push('subtraction');
+        else if (isMultiplicationOp(op)) featureList.push('multiplication');
+        else if (isDivisionOp(op)) featureList.push('division');
+    });
+
+    const featuresText =
+        featureList.length > 1
+            ? featureList.slice(0, -1).join(', ') + ' and ' + featureList.slice(-1)
+            : featureList[0] || 'these operations';
+
+    steps.push(`**Remember BIDMAS!** We follow Brackets, Indices, Division/Multiplication, then Addition/Subtraction in that order.`);
+    steps.push(`**Scan the question.** ${questionText} includes ${featuresText}.`);
+
+    const isPureNumber = (expr: string) => expr.trim().match(/^-?\d+(\.\d+)?$/);
+
+    let runningExpression = questionText;
+    metadata.executionSteps.forEach((step, idx) => {
+        const activeExpr = step.activeExpression || `${step.operands[0]} ${step.operation} ${step.operands[1]}`;
+        // Skip noisy steps that only contain a single evaluated number
+        if (isPureNumber(activeExpr)) {
+            runningExpression = rewriteBIDMASExpression(runningExpression, activeExpr, step.result, step.operation);
+            return;
+        }
+        const rewritten = rewriteBIDMASExpression(runningExpression, activeExpr, step.result, step.operation);
+
+        steps.push(`**Step ${idx + 1}:** Calculate **${activeExpr}**.`);
+        steps.push(`**Rewrite:** ${rewritten}`);
+        runningExpression = rewritten;
+    });
+
+    steps.push(`**All done.** After these steps, the equation simplifies to **${runningExpression}**.`);
+
+    return steps;
 };
 const getPlaceValueExplanation = (q: Question): string[] => {
     const [num] = getOperands(q);
@@ -312,7 +312,7 @@ const getDecimalAdditionExplanation = (q: Question): string[] => {
         `**Line up the decimal points!** This is the most important rule. Write the numbers in a column, ensuring the decimal points are directly underneath each other.`,
         `**Fill in gaps with zeros.** To make it clearer, you can add placeholder zeros to the end of numbers so they have the same number of decimal places.`,
         `**Add like normal.** Start from the right and add each column, carrying over where necessary, just like you would with whole numbers.`,
-        `**Bring the decimal point down.** The decimal point in your answer goes directly below the decimal points in the question. The final answer is **${q.answer}**.`
+        `**Bring the decimal point down.** The decimal point in your answer goes directly below the decimal points in the question. The final answer is **${parseFloat(q.answer).toString()}**.`
     ];
 };
 

@@ -14,6 +14,7 @@ import DivisionKnownFactsVisualizer from './components/visualizers/DivisionKnown
 import MultiplyByPowersOfTenVisualizer from './components/visualizers/MultiplyByPowersOfTenVisualizer';
 import DivideByPowersOfTenVisualizer from './components/visualizers/DivideByPowersOfTenVisualizer';
 import PowersIndicesVisualizer from './components/visualizers/PowersIndicesVisualizer';
+import DecimalAdditionVisualizer from './components/visualizers/DecimalAdditionVisualizer';
 import BIDMASVisualizer from './components/visualizers/BIDMASVisualizer';
 import WorkingOutCanvas from './components/WorkingOutCanvas';
 
@@ -250,6 +251,9 @@ const StepByStepGuidancePanel: React.FC<{
             )}
             {question.type === QuestionType.PowersIndices && (
               <PowersIndicesVisualizer question={question} />
+            )}
+            {question.type === QuestionType.DecimalAddition && (
+              <DecimalAdditionVisualizer question={question} stepIndex={stepIndex} />
             )}
           </div>
         </div>
