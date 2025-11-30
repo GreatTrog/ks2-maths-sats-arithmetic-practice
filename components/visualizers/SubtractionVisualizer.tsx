@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { Question } from '../../types';
 
 interface SubtractionVisualizerProps {
@@ -80,161 +80,76 @@ const SubtractionVisualizer: React.FC<SubtractionVisualizerProps> = ({ question,
     const [visibleColumns, setVisibleColumns] = useState(-1);
     const [operandVisibleIndex, setOperandVisibleIndex] = useState(-1);
     const [borrowAnimationProgress, setBorrowAnimationProgress] = useState<{ [key: number]: number }>({});
-    const [step1HighlightRed, setStep1HighlightRed] = useState(false);
 
-    const isRegroupingProblem = useMemo(() => {
-        return Object.keys(borrowChains).some(key => {
-            const chain = borrowChains[parseInt(key)];
-            return chain && chain.length > 1;
-        });
-    }, [borrowChains]);
+    const isMounted = useRef(true);
 
     useEffect(() => {
-        if (stepIndex === 0) {
-            setVisibleColumns(-1);
-            setOperandVisibleIndex(-1);
-            setBorrowAnimationProgress({});
-            setStep1HighlightRed(false);
-            let current = -1;
-            const interval = setInterval(() => {
-                current++;
-                if (current >= maxLength) {
-                    clearInterval(interval);
-                }
-                setOperandVisibleIndex((prev) => Math.max(prev, current));
-            }, 300);
-            return () => clearInterval(interval);
-        } else {
-            setOperandVisibleIndex(maxLength);
-        }
+        isMounted.current = true;
+        return () => { isMounted.current = false; };
+    }, []);
 
-        if (stepIndex === 1) {
-            setBorrowAnimationProgress({});
-            setStep1HighlightRed(false);
+    useEffect(() => {
+        const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-            if (isRegroupingProblem) {
+        const runAnimation = async () => {
+            if (stepIndex === 0) {
                 setVisibleColumns(-1);
-                const timeout = setTimeout(() => {
-                    setStep1HighlightRed(true);
-                }, 2000);
-                return () => clearTimeout(timeout);
-            } else {
+                setOperandVisibleIndex(-1);
+                setBorrowAnimationProgress({});
+
+                for (let i = 0; i < maxLength; i++) {
+                    if (!isMounted.current) return;
+                    setOperandVisibleIndex(i);
+                    await delay(100);
+                }
+            } else if (stepIndex === 1) {
+                setOperandVisibleIndex(maxLength);
                 setVisibleColumns(0);
-            }
-        }
-        else if (stepIndex === 2) {
-            setStep1HighlightRed(false);
-
-            if (isRegroupingProblem) {
+                setBorrowAnimationProgress({});
+            } else if (stepIndex === 2) {
+                setOperandVisibleIndex(maxLength);
                 setVisibleColumns(-1);
+                setBorrowAnimationProgress({});
 
-                const allChains = Object.keys(borrowChains).map(k => parseInt(k));
-                if (allChains.length > 0) {
-                    let chainIndex = 0;
+                for (let colIndex = maxLength - 1; colIndex >= 0; colIndex--) {
+                    if (!isMounted.current) return;
 
-                    const animateNextChain = () => {
-                        if (chainIndex >= allChains.length) return;
+                    const chain = borrowChains[colIndex];
 
-                        const col = allChains[chainIndex];
-                        const chain = borrowChains[col];
-                        let progress = 0;
+                    if (chain && chain.length > 0) {
+                        for (let progress = 0; progress <= chain.length; progress++) {
+                            if (!isMounted.current) return;
+                            setBorrowAnimationProgress(prev => ({ ...prev, [colIndex]: progress }));
+                            await delay(800);
+                        }
+                    }
 
-                        const chainInterval = setInterval(() => {
-                            if (progress <= chain.length) {
-                                setBorrowAnimationProgress(prev => ({
-                                    ...prev,
-                                    [col]: progress
-                                }));
-                                progress++;
-                            } else {
-                                clearInterval(chainInterval);
-                                chainIndex++;
-                                animateNextChain();
-                            }
-                        }, 600);
-                    };
+                    await delay(300);
 
-                    animateNextChain();
+                    if (!isMounted.current) return;
+                    setVisibleColumns(maxLength - 1 - colIndex);
+
+                    await delay(1000);
                 }
-            } else {
-                const allBorrowProgress: { [key: number]: number } = {};
-                Object.keys(borrowChains).forEach(key => {
-                    const col = parseInt(key);
-                    allBorrowProgress[col] = borrowChains[col].length;
-                });
-                setBorrowAnimationProgress(allBorrowProgress);
-
-                let current = 0;
-                const interval = setInterval(() => {
-                    setVisibleColumns(current);
-                    current++;
-                    if (current >= maxLength) {
-                        clearInterval(interval);
-                    }
-                }, 1000);
-                return () => clearInterval(interval);
-            }
-        }
-        else if (stepIndex === 3) {
-            setStep1HighlightRed(false);
-
-            if (isRegroupingProblem) {
-                const allBorrowProgress: { [key: number]: number } = {};
-                Object.keys(borrowChains).forEach(key => {
-                    const col = parseInt(key);
-                    allBorrowProgress[col] = borrowChains[col].length;
-                });
-                setBorrowAnimationProgress(allBorrowProgress);
-
-                let current = 0;
-                const interval = setInterval(() => {
-                    setVisibleColumns(current);
-                    current++;
-                    if (current >= maxLength) {
-                        clearInterval(interval);
-                    }
-                }, 600);
-                return () => clearInterval(interval);
-            } else {
+            } else if (stepIndex === 3) {
+                setOperandVisibleIndex(maxLength);
                 setVisibleColumns(maxLength);
+
+                const allBorrowProgress: { [key: number]: number } = {};
+                Object.keys(borrowChains).forEach(key => {
+                    const col = parseInt(key);
+                    allBorrowProgress[col] = borrowChains[col].length + 1;
+                });
+                setBorrowAnimationProgress(allBorrowProgress);
             }
-        }
-    }, [stepIndex, maxLength, borrowChains, isRegroupingProblem]);
+        };
 
-    const getColumnStyle = (index: number) => {
-        const reverseIndex = maxLength - 1 - index;
+        runAnimation();
 
-        if (isRegroupingProblem && stepIndex === 1) {
-            const top = parseInt(paddedNum1[index] || '0');
-            const bottom = parseInt(paddedNum2[index] || '0');
-            if (top < bottom) {
-                return step1HighlightRed
-                    ? 'bg-red-100 border-red-400 scale-105'
-                    : 'bg-yellow-200 border-yellow-400 scale-110';
-            }
-        }
-
-        if (stepIndex === 1 && reverseIndex === 0 && !isRegroupingProblem) {
-            return 'bg-yellow-200 border-yellow-400 scale-110';
-        }
-
-        if (stepIndex === 2 && reverseIndex === visibleColumns && !isRegroupingProblem) {
-            return 'bg-blue-100 border-blue-300 scale-105';
-        }
-
-        if (stepIndex === 3 && reverseIndex === visibleColumns) {
-            return 'bg-green-100 border-green-300 scale-105';
-        }
-
-        return 'border-transparent';
-    };
+    }, [stepIndex, maxLength, borrowChains]);
 
     const isDigitVisible = (index: number) => {
-        if (isRegroupingProblem) {
-            if (stepIndex < 3) return false;
-        } else {
-            if (stepIndex < 1) return false;
-        }
+        if (stepIndex < 2) return false;
         return (maxLength - 1 - index) <= visibleColumns;
     };
 
@@ -255,7 +170,6 @@ const SubtractionVisualizer: React.FC<SubtractionVisualizerProps> = ({ question,
     };
 
     const isInVisibleChain = (index: number) => {
-        if (!isRegroupingProblem) return false;
         if (stepIndex < 2) return false;
 
         for (const key of Object.keys(borrowChains)) {
@@ -281,7 +195,7 @@ const SubtractionVisualizer: React.FC<SubtractionVisualizerProps> = ({ question,
         const showBorrowEffect = isBorrowVisible(index);
 
         return (
-            <div key={index} className={`relative w-10 h-12 flex items-center justify-center text-3xl font-mono font-bold rounded transition-all duration-500 border-2 ${getColumnStyle(index)}
+            <div key={index} className={`relative w-10 h-12 flex items-center justify-center text-3xl font-mono font-bold rounded transition-all duration-500 border-2 border-transparent
             ${index > operandVisibleIndex ? 'opacity-0 -translate-x-4' : 'opacity-100 translate-x-0'}
         `}>
                 <span className={`transition-all duration-300 ${showBorrowEffect ? 'line-through text-gray-400 decoration-red-500 decoration-2' : ''}`}>
@@ -294,7 +208,7 @@ const SubtractionVisualizer: React.FC<SubtractionVisualizerProps> = ({ question,
                     </span>
                 )}
 
-                {isRegroupingProblem && (stepIndex === 2 || stepIndex === 3) && isInVisibleChain(index) && (
+                {(stepIndex === 2 || stepIndex === 3) && isInVisibleChain(index) && (
                     <span className="absolute -left-2 top-1 text-sm font-bold text-red-500">1</span>
                 )}
             </div>
@@ -309,7 +223,7 @@ const SubtractionVisualizer: React.FC<SubtractionVisualizerProps> = ({ question,
 
                 <div className={`w-10 flex items-center justify-center text-3xl font-bold text-gray-400 transition-opacity duration-500 ${operandVisibleIndex >= 0 ? 'opacity-100' : 'opacity-0'}`}>-</div>
                 {paddedNum2.split('').map((d, i) => (
-                    <div key={i} className={`w-10 h-12 flex items-center justify-center text-3xl font-mono font-bold rounded transition-all duration-500 border-2 ${getColumnStyle(i)}
+                    <div key={i} className={`w-10 h-12 flex items-center justify-center text-3xl font-mono font-bold rounded transition-all duration-500 border-2 border-transparent
                 ${i > operandVisibleIndex ? 'opacity-0 -translate-x-4' : 'opacity-100 translate-x-0'}
              `}>
                         {d}
