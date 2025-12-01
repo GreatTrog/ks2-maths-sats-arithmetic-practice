@@ -289,11 +289,50 @@ const StepByStepGuidancePanel: React.FC<{
 
 const questionTypes = Object.values(QuestionType);
 
-// Helper to check fraction equivalence (simplified)
+// Helper to parse fraction string into {n, d}
+const parseFraction = (text: string): { n: number, d: number } | null => {
+  text = text.trim();
+  if (!text) return null;
+
+  // Mixed number: "1 1/2"
+  const mixedMatch = text.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  if (mixedMatch) {
+    const w = parseInt(mixedMatch[1], 10);
+    const n = parseInt(mixedMatch[2], 10);
+    const d = parseInt(mixedMatch[3], 10);
+    if (d === 0) return null;
+    return { n: w * d + n, d };
+  }
+
+  // Simple fraction: "1/2"
+  const fractionMatch = text.match(/^(\d+)\/(\d+)$/);
+  if (fractionMatch) {
+    const n = parseInt(fractionMatch[1], 10);
+    const d = parseInt(fractionMatch[2], 10);
+    if (d === 0) return null;
+    return { n, d };
+  }
+
+  // Whole number: "3"
+  if (/^\d+$/.test(text)) {
+    return { n: parseInt(text, 10), d: 1 };
+  }
+
+  return null;
+};
+
+// Helper to check fraction equivalence
 const areFractionsEquivalent = (ans1: string, ans2: string): boolean => {
-  // Very basic check, ideally would parse and compare values
-  // For now, strip spaces and compare
-  return ans1.replace(/\s/g, '') === ans2.replace(/\s/g, '');
+  const f1 = parseFraction(ans1);
+  const f2 = parseFraction(ans2);
+
+  if (!f1 || !f2) {
+    // Fallback to simple string comparison if parsing fails
+    return ans1.trim() === ans2.trim();
+  }
+
+  // Cross-multiply to check equivalence: n1/d1 == n2/d2 <=> n1*d2 == n2*d1
+  return f1.n * f2.d === f2.n * f1.d;
 };
 
 // Helper for speech
