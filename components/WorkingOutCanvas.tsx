@@ -14,6 +14,7 @@ const WorkingOutCanvas: React.FC<WorkingOutCanvasProps> = ({ isVisible, onClose,
     const [isInitialized, setIsInitialized] = useState(false);
     const [selectedColor, setSelectedColor] = useState('#000000');
     const [selectedTool, setSelectedTool] = useState<'pen' | 'eraser'>('pen');
+    const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
 
     // Color palette for the swatches
     const colors = [
@@ -96,6 +97,9 @@ const WorkingOutCanvas: React.FC<WorkingOutCanvasProps> = ({ isVisible, onClose,
         e.preventDefault();
         const { x, y } = getCoordinates(e);
 
+        // Update mouse position for eraser cursor
+        setMousePos({ x, y });
+
         if (selectedTool === 'eraser') {
             // Eraser mode: clear a circular area
             context.save();
@@ -134,6 +138,21 @@ const WorkingOutCanvas: React.FC<WorkingOutCanvasProps> = ({ isVisible, onClose,
             x: clientX - rect.left,
             y: clientY - rect.top
         };
+    };
+
+    const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
+        const { x, y } = getCoordinates(e);
+        setMousePos({ x, y });
+
+        // Also draw if currently drawing
+        if (isDrawing) {
+            draw(e);
+        }
+    };
+
+    const handleMouseLeave = () => {
+        setMousePos(null);
+        stopDrawing();
     };
 
     return (
@@ -209,19 +228,32 @@ const WorkingOutCanvas: React.FC<WorkingOutCanvasProps> = ({ isVisible, onClose,
                 </div>
 
                 {/* Canvas Area */}
-                <div className={`flex-1 relative bg-yellow-50 touch-none ${selectedTool === 'pen' ? 'cursor-crosshair' : 'cursor-pointer'
+                <div className={`flex-1 relative bg-yellow-50 touch-none ${selectedTool === 'pen' ? 'cursor-crosshair' : 'cursor-none'
                     }`}>
                     {/* Grid lines for "paper" feel */}
                     <div className="absolute inset-0 pointer-events-none opacity-10"
                         style={{ backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
                     </div>
 
+                    {/* Eraser cursor indicator */}
+                    {selectedTool === 'eraser' && mousePos && (
+                        <div
+                            className="absolute pointer-events-none border-2 border-red-500 rounded-full"
+                            style={{
+                                left: mousePos.x - 10,
+                                top: mousePos.y - 10,
+                                width: 20,
+                                height: 20,
+                            }}
+                        />
+                    )}
+
                     <canvas
                         ref={canvasRef}
                         onMouseDown={startDrawing}
-                        onMouseMove={draw}
+                        onMouseMove={handleMouseMove}
                         onMouseUp={stopDrawing}
-                        onMouseLeave={stopDrawing}
+                        onMouseLeave={handleMouseLeave}
                         onTouchStart={startDrawing}
                         onTouchMove={draw}
                         onTouchEnd={stopDrawing}
