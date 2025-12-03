@@ -13,6 +13,7 @@ const WorkingOutCanvas: React.FC<WorkingOutCanvasProps> = ({ isVisible, onClose,
     const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
     const [isInitialized, setIsInitialized] = useState(false);
     const [selectedColor, setSelectedColor] = useState('#000000');
+    const [selectedTool, setSelectedTool] = useState<'pen' | 'eraser'>('pen');
 
     // Color palette for the swatches
     const colors = [
@@ -83,16 +84,31 @@ const WorkingOutCanvas: React.FC<WorkingOutCanvasProps> = ({ isVisible, onClose,
         if (!context) return;
         setIsDrawing(true);
         const { x, y } = getCoordinates(e);
-        context.beginPath();
-        context.moveTo(x, y);
+
+        if (selectedTool === 'pen') {
+            context.beginPath();
+            context.moveTo(x, y);
+        }
     };
 
     const draw = (e: React.MouseEvent | React.TouchEvent) => {
         if (!isDrawing || !context) return;
         e.preventDefault();
         const { x, y } = getCoordinates(e);
-        context.lineTo(x, y);
-        context.stroke();
+
+        if (selectedTool === 'eraser') {
+            // Eraser mode: clear a circular area
+            context.save();
+            context.globalCompositeOperation = 'destination-out';
+            context.beginPath();
+            context.arc(x, y, 10, 0, Math.PI * 2); // 10px radius eraser
+            context.fill();
+            context.restore();
+        } else {
+            // Pen mode: normal drawing
+            context.lineTo(x, y);
+            context.stroke();
+        }
     };
 
     const stopDrawing = () => {
@@ -143,14 +159,38 @@ const WorkingOutCanvas: React.FC<WorkingOutCanvasProps> = ({ isVisible, onClose,
                                 <button
                                     key={color}
                                     onClick={() => setSelectedColor(color)}
-                                    className={`w-8 h-8 rounded-full transition-all hover:scale-110 ${selectedColor === color
-                                            ? 'ring-4 ring-white shadow-lg scale-110'
-                                            : 'ring-2 ring-white/50'
+                                    className={`w-5 h-5 rounded-full transition-all hover:scale-110 ${selectedColor === color
+                                        ? 'ring-4 ring-white shadow-lg scale-110'
+                                        : 'ring-2 ring-white/50'
                                         }`}
                                     style={{ backgroundColor: color }}
                                     title={`Select ${color}`}
                                 />
                             ))}
+                        </div>
+
+                        {/* Tool Selection: Pen/Eraser */}
+                        <div className="flex gap-2 bg-white/20 p-2 rounded-xl">
+                            <button
+                                onClick={() => setSelectedTool('pen')}
+                                className={`px-2 py-2 rounded-lg font-bold transition-all ${selectedTool === 'pen'
+                                    ? 'bg-white text-primary shadow-md'
+                                    : 'text-white hover:bg-white/30'
+                                    }`}
+                                title="Pen Tool"
+                            >
+                                ✏️ Pen
+                            </button>
+                            <button
+                                onClick={() => setSelectedTool('eraser')}
+                                className={`px-2 py-2 rounded-lg font-bold transition-all ${selectedTool === 'eraser'
+                                    ? 'bg-white text-primary shadow-md'
+                                    : 'text-white hover:bg-white/30'
+                                    }`}
+                                title="Eraser Tool"
+                            >
+                                🧹 Eraser
+                            </button>
                         </div>
 
                         <button
@@ -169,7 +209,8 @@ const WorkingOutCanvas: React.FC<WorkingOutCanvasProps> = ({ isVisible, onClose,
                 </div>
 
                 {/* Canvas Area */}
-                <div className="flex-1 relative bg-yellow-50 cursor-crosshair touch-none">
+                <div className={`flex-1 relative bg-yellow-50 touch-none ${selectedTool === 'pen' ? 'cursor-crosshair' : 'cursor-pointer'
+                    }`}>
                     {/* Grid lines for "paper" feel */}
                     <div className="absolute inset-0 pointer-events-none opacity-10"
                         style={{ backgroundImage: 'linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px)', backgroundSize: '40px 40px' }}>
