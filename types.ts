@@ -22,6 +22,7 @@ export enum QuestionType {
   DecimalAddition = 'Decimal Addition (varying places)',
   DecimalSubtraction = 'Decimal Subtraction (varying places)',
   DecimalMultiplication = 'Decimal Multiplication (by whole number)',
+  DecimalMultiplication2Digit = 'Decimal Multiplication (by 2-digit number)',
 
   // Fractions
   FractionAdditionSimpleDenominators = 'Fraction Addition (simple denominators)',
@@ -32,6 +33,7 @@ export enum QuestionType {
   FractionSubtractionMixedNumbers = 'Fraction Subtraction (mixed numbers)',
   FractionMultiplication = 'Fraction Multiplication',
   FractionMultiplicationMixedNumbers = 'Fraction Multiplication (mixed numbers)',
+  FractionMultiplication2Digit = 'Fraction Multiplication (by 2-digit number)',
   FractionDivision = 'Fraction Division (by whole number)',
   FractionsOfAmounts = 'Fractions of Amounts',
 

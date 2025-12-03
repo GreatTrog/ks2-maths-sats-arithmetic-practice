@@ -341,6 +341,31 @@ const getDecimalMultiplicationExplanation = (q: Question): string[] => {
     ];
 };
 
+const getDecimalMultiplication2DigitExplanation = (q: Question): string[] => {
+    const [num1, num2] = getOperands(q);
+    const decimalPlaces = (num1.split('.')[1] || '').length;
+    const num1AsInt = num1.replace('.', '');
+    const intResult = (parseInt(num1AsInt) * parseInt(num2)).toString();
+
+    return [
+        `**Ignore the decimal point.** First, pretend the decimal point in **${num1}** isn't there. This turns the problem into a simpler whole number multiplication: **${num1AsInt} × ${num2}**.`,
+        `**Use long multiplication.** Since we're multiplying by a two-digit number, we use the long multiplication method. Multiply **${num1AsInt}** by the ones digit of **${num2}**, then by the tens digit (remembering to add a zero placeholder).`,
+        `**Add the partial products.** Add together the two rows you calculated to get **${intResult}** as the answer to the whole number problem.`,
+        `**Place the decimal point.** Finally, count the decimal places. **${num1}** has **${decimalPlaces}** decimal place(s), so move the decimal point **${decimalPlaces}** place(s) from the right in your answer to get **${q.answer}**.`
+    ];
+};
+
+const getFractionMultiplication2DigitExplanation = (q: Question): string[] => {
+    const [mixedNum, multiplier] = getOperands(q);
+
+    return [
+        `**Convert to an improper fraction.** First, turn the mixed number **${mixedNum}** into an improper (top-heavy) fraction. Multiply the whole number by the denominator, then add the numerator. Keep the same denominator.`,
+        `**Multiply the numerator.** Now multiply the numerator of your improper fraction by the whole number **${multiplier}**. The denominator stays the same.`,
+        `**Simplify if needed.** If the resulting fraction can be simplified, divide both the numerator and denominator by their greatest common factor.`,
+        `**Convert back to a mixed number.** Divide the numerator by the denominator. The whole number part is the quotient, and the remainder becomes the new numerator. The final answer is **${q.answer}**.`
+    ];
+};
+
 const getFractionsOfAmountsExplanation = (q: Question): string[] => {
     const [fraction, amount] = q.text.replace('=', '').split('of');
     const frac = parseSimpleFraction(fraction.trim());
@@ -492,6 +517,7 @@ const explanationTemplates: Record<QuestionType, (q: Question) => string[]> = {
     [QuestionType.DecimalAddition]: getDecimalAdditionExplanation,
     [QuestionType.DecimalSubtraction]: getDecimalSubtractionExplanation,
     [QuestionType.DecimalMultiplication]: getDecimalMultiplicationExplanation,
+    [QuestionType.DecimalMultiplication2Digit]: getDecimalMultiplication2DigitExplanation,
     [QuestionType.FractionAdditionSimpleDenominators]: getFractionAdditionExplanation,
     [QuestionType.FractionAdditionUnlikeDenominators]: getFractionAdditionExplanation,
     [QuestionType.FractionAdditionMixedNumbers]: getMixedNumberExplanation,
@@ -500,6 +526,7 @@ const explanationTemplates: Record<QuestionType, (q: Question) => string[]> = {
     [QuestionType.FractionSubtractionMixedNumbers]: getMixedNumberExplanation,
     [QuestionType.FractionMultiplication]: getFractionMultiplicationExplanation,
     [QuestionType.FractionMultiplicationMixedNumbers]: getMixedNumberExplanation,
+    [QuestionType.FractionMultiplication2Digit]: getFractionMultiplication2DigitExplanation,
     [QuestionType.FractionDivision]: getFractionDivisionExplanation,
     [QuestionType.FractionsOfAmounts]: getFractionsOfAmountsExplanation,
     [QuestionType.Percentages]: getPercentagesExplanation,
