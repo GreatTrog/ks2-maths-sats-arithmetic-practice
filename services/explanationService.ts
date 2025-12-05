@@ -511,6 +511,48 @@ const getFractionAdditionMixedNumbersExplanation = (q: Question): string[] => {
     return steps;
 };
 
+const getFractionMultiplicationMixedNumbersExplanation = (q: Question): string[] => {
+    // Expected: "2 2/3 x 3 1/5"
+    const [mixed1, mixed2] = getOperands(q);
+
+    // Helpers
+    const parseMixed = (str: string) => {
+        const parts = str.trim().split(' ');
+        if (parts.length === 2) {
+            return { w: parseInt(parts[0]), ...parseSimpleFraction(parts[1])! };
+        }
+        if (str.includes('/')) {
+            return { w: 0, ...parseSimpleFraction(str)! };
+        }
+        return { w: parseInt(str), n: 0, d: 1 };
+    };
+
+    const m1 = parseMixed(mixed1);
+    const m2 = parseMixed(mixed2);
+
+    const impN1 = m1.w * m1.d + m1.n;
+    const impN2 = m2.w * m2.d + m2.n;
+
+    // Result Improper
+    const resN = impN1 * impN2;
+    const resD = m1.d * m2.d;
+
+    // Result Mixed
+    const finalW = Math.floor(resN / resD);
+    const finalRem = resN % resD;
+
+    const steps = [
+        `**Convert to improper fractions.** To multiply with a mixed number, first turn it into a top-heavy fraction. \nFor **${mixed1}**: multiply ${m1.w} by ${m1.d} and add ${m1.n} to get **${impN1}/${m1.d}**.\nThe second fraction **${mixed2}** remains the same.`,
+        `**Multiply the fractions.** Now multiply the numerators together and the denominators together: \n**${impN1} × ${impN2} = ${resN}** \n**${m1.d} × ${m2.d} = ${resD}** \nSo the improper answer is **${resN}/${resD}**.`,
+    ];
+
+    if (resN >= resD) {
+        steps.push(`**Convert back to a mixed number.** Finally, divide the numerator by the denominator: **${resN} ÷ ${resD}** is **${finalW}** with a remainder of **${finalRem}**. \nSo the final answer is **${finalW} ${finalRem}/${resD}**.`);
+    }
+
+    return steps;
+};
+
 const getMixedNumberExplanation = (q: Question): string[] => {
     return [
         `**Convert to improper fractions.** The easiest way to work with mixed numbers (like **1 ½**) is to turn them into 'top-heavy' or improper fractions first. To do this, multiply the whole number by the denominator, then add the numerator. The denominator stays the same.`,
@@ -598,7 +640,7 @@ const explanationTemplates: Record<QuestionType, (q: Question) => string[]> = {
     [QuestionType.FractionSubtractionUnlikeDenominators]: getFractionSubtractionExplanation,
     [QuestionType.FractionSubtractionMixedNumbers]: getMixedNumberExplanation,
     [QuestionType.FractionMultiplication]: getFractionMultiplicationExplanation,
-    [QuestionType.FractionMultiplicationMixedNumbers]: getMixedNumberExplanation,
+    [QuestionType.FractionMultiplicationMixedNumbers]: getFractionMultiplicationMixedNumbersExplanation,
     [QuestionType.FractionMultiplication2Digit]: getFractionMultiplication2DigitExplanation,
     [QuestionType.FractionDivision]: getFractionDivisionExplanation,
     [QuestionType.FractionsOfAmounts]: getFractionsOfAmountsExplanation,

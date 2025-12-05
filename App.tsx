@@ -21,6 +21,7 @@ import FractionsOfAmountsVisualizer from './components/visualizers/FractionsOfAm
 import DecimalLongMultiplicationVisualizer from './components/visualizers/DecimalLongMultiplicationVisualizer';
 import FractionMultiplicationVisualizer from './components/visualizers/FractionMultiplicationVisualizer';
 import MixedNumberAdditionVisualizer from './components/visualizers/MixedNumberAdditionVisualizer';
+import MixedNumberMultiplicationVisualizer from './components/visualizers/MixedNumberMultiplicationVisualizer';
 import FractionBarVisualizer from './components/visualizers/FractionBarVisualizer';
 import BIDMASVisualizer from './components/visualizers/BIDMASVisualizer';
 import WorkingOutCanvas from './components/WorkingOutCanvas';
@@ -297,6 +298,9 @@ const StepByStepGuidancePanel: React.FC<{
             )}
             {question.type === QuestionType.FractionMultiplication && (
               <FractionMultiplicationVisualizer question={question} stepIndex={stepIndex} />
+            )}
+            {question.type === QuestionType.FractionMultiplicationMixedNumbers && (
+              <MixedNumberMultiplicationVisualizer question={question} stepIndex={stepIndex} />
             )}
           </div>
         </div>
