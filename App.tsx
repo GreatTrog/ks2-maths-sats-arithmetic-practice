@@ -20,6 +20,7 @@ import DecimalMultiplicationVisualizer from './components/visualizers/DecimalMul
 import FractionsOfAmountsVisualizer from './components/visualizers/FractionsOfAmountsVisualizer';
 import DecimalLongMultiplicationVisualizer from './components/visualizers/DecimalLongMultiplicationVisualizer';
 import FractionMultiplicationVisualizer from './components/visualizers/FractionMultiplicationVisualizer';
+import FractionBarVisualizer from './components/visualizers/FractionBarVisualizer';
 import BIDMASVisualizer from './components/visualizers/BIDMASVisualizer';
 import WorkingOutCanvas from './components/WorkingOutCanvas';
 
@@ -232,7 +233,7 @@ const StepByStepGuidancePanel: React.FC<{
           </div>
 
           {/* Visualizer */}
-          <div className="flex-shrink-0 flex justify-center md:justify-end">
+          <div className="flex-shrink-0 flex justify-center md:justify-end overflow-x-auto pb-4">
             {question.type === QuestionType.Addition && (
               <AdditionVisualizer question={question} stepIndex={stepIndex} />
             )}
@@ -284,6 +285,12 @@ const StepByStepGuidancePanel: React.FC<{
             {question.type === QuestionType.FractionsOfAmounts && (
               <FractionsOfAmountsVisualizer question={question} stepIndex={stepIndex} />
             )}
+            {(question.type === QuestionType.FractionAdditionSimpleDenominators ||
+              question.type === QuestionType.FractionAdditionUnlikeDenominators ||
+              question.type === QuestionType.FractionSubtractionSimpleDenominators ||
+              question.type === QuestionType.FractionSubtractionUnlikeDenominators) && (
+                <FractionBarVisualizer question={question} stepIndex={stepIndex} />
+              )}
             {question.type === QuestionType.FractionMultiplication && (
               <FractionMultiplicationVisualizer question={question} stepIndex={stepIndex} />
             )}
