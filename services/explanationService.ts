@@ -347,11 +347,17 @@ const getDecimalMultiplication2DigitExplanation = (q: Question): string[] => {
     const num1AsInt = num1.replace('.', '');
     const intResult = (parseInt(num1AsInt) * parseInt(num2)).toString();
 
+    // Digits for explanation
+    const onesDigit = num2.slice(-1);
+    const tensDigit = num2.slice(0, 1);
+
     return [
-        `**Ignore the decimal point.** First, pretend the decimal point in **${num1}** isn't there. This turns the problem into a simpler whole number multiplication: **${num1AsInt} × ${num2}**.`,
-        `**Use long multiplication.** Since we're multiplying by a two-digit number, we use the long multiplication method. Multiply **${num1AsInt}** by the ones digit of **${num2}**, then by the tens digit (remembering to add a zero placeholder).`,
-        `**Add the partial products.** Add together the two rows you calculated to get **${intResult}** as the answer to the whole number problem.`,
-        `**Place the decimal point.** Finally, count the decimal places. **${num1}** has **${decimalPlaces}** decimal place(s), so move the decimal point **${decimalPlaces}** place(s) from the right in your answer to get **${q.answer}**.`
+        `**Ignore the decimal point.** First, pretend the decimal point in **${num1}** isn't there. We will solve **${num1AsInt} × ${num2}** first.`,
+        `**Multiply by the ones digit.** Multiply **${num1AsInt}** by the ones digit (**${onesDigit}**).`,
+        `**Prepare to multiply by the tens digit.** Since we are multiplying by the tens digit (**${tensDigit}**), place a **zero** in the ones column of the second row.`,
+        `**Multiply by the tens digit.** Now multiply **${num1AsInt}** by the tens digit (**${tensDigit}**).`,
+        `**Add the partial products.** Add the two rows together to get the whole number answer: **${intResult}**.`,
+        `**Place the decimal point.** Finally, **${num1}** has **${decimalPlaces}** decimal place(s). Move the decimal point **${decimalPlaces}** place(s) from the right to get **${q.answer}**.`
     ];
 };
 
