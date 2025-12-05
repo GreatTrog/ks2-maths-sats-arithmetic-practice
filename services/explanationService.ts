@@ -444,6 +444,73 @@ const getFractionDivisionExplanation = (q: Question): string[] => {
     ];
 };
 
+const getFractionAdditionMixedNumbersExplanation = (q: Question): string[] => {
+    // Parse "1 1/2 + 2 3/4"
+    const [mixed1, mixed2] = getOperands(q);
+
+    // Helper to parse mixed number strings like "1 1/2" or "3" or "1/2"
+    const parseMixed = (str: string) => {
+        const parts = str.trim().split(' ');
+        if (parts.length === 2) {
+            return { w: parseInt(parts[0]), ...parseSimpleFraction(parts[1])! };
+        }
+        if (str.includes('/')) {
+            return { w: 0, ...parseSimpleFraction(str)! };
+        }
+        return { w: parseInt(str), n: 0, d: 1 };
+    };
+
+    const m1 = parseMixed(mixed1);
+    const m2 = parseMixed(mixed2);
+
+    // 1. Add Wholes
+    const totalWholes = m1.w + m2.w;
+
+    // 2. Add Fractions
+    // Find Common Denominator
+    const commonD = (m1.d * m2.d) / gcd(m1.d, m2.d);
+    const factor1 = commonD / m1.d;
+    const factor2 = commonD / m2.d;
+    const newN1 = m1.n * factor1;
+    const newN2 = m2.n * factor2;
+    const totalN = newN1 + newN2; // Improper numerator
+
+    // 3. Convert Result
+    const extraWholes = Math.floor(totalN / commonD);
+    const remN = totalN % commonD;
+
+    const finalWholes = totalWholes + extraWholes;
+    // Simplify final fraction
+    const commonFactor = gcd(remN, commonD);
+    const simpleN = remN / commonFactor;
+    const simpleD = commonD / commonFactor;
+
+    const steps = [
+        `**Add the whole numbers.** First, separate the whole numbers from the fractions. Add **${m1.w}** and **${m2.w}** to get **${totalWholes}**.`,
+        `**Add the fractions.** Now look at the fractions: **${m1.n}/${m1.d}** and **${m2.n}/${m2.d}**. We need a common denominator, which is **${commonD}**.`,
+        `**Combine the fractions.** Convert them: **${newN1}/${commonD}** + **${newN2}/${commonD}** = **${totalN}/${commonD}**.`,
+    ];
+
+    if (extraWholes > 0) {
+        steps.push(`**Convert the improper fraction.** The fraction **${totalN}/${commonD}** is top-heavy (improper). ${totalN} divided by ${commonD} is **${extraWholes}** with a remainder of **${remN}**, so it becomes **${extraWholes} ${remN}/${commonD}**.`);
+        steps.push(`**Add the extra whole number.** Add this **${extraWholes}** to our previous whole number total (**${totalWholes}**) to get **${finalWholes}**. The remaining fraction is **${remN}/${commonD}**. The final answer is **${finalWholes} ${remN}/${commonD}**.`);
+        // Note: Simplification might be needed but usually handled in final check or implicit.
+        // If simplify takes another step?
+        if (commonFactor > 1) {
+            steps.push(`**Simplify the fraction.** Divide **${remN}** and **${commonD}** by ${commonFactor} to get **${simpleN}/${simpleD}**. Final answer: **${finalWholes} ${simpleN}/${simpleD}**.`);
+        }
+    } else {
+        // No extra wholes
+        if (commonFactor > 1) {
+            steps.push(`**Combine totals.** The wholes are **${totalWholes}** and the fraction is **${remN}/${commonD}**. We can simplify the fraction to **${simpleN}/${simpleD}**. Final answer: **${finalWholes} ${simpleN}/${simpleD}**.`);
+        } else {
+            steps.push(`**Combine totals.** The wholes are **${totalWholes}** and the fraction is **${remN}/${commonD}**. Final answer: **${finalWholes} ${remN}/${commonD}**.`);
+        }
+    }
+
+    return steps;
+};
+
 const getMixedNumberExplanation = (q: Question): string[] => {
     return [
         `**Convert to improper fractions.** The easiest way to work with mixed numbers (like **1 ½**) is to turn them into 'top-heavy' or improper fractions first. To do this, multiply the whole number by the denominator, then add the numerator. The denominator stays the same.`,
@@ -526,7 +593,7 @@ const explanationTemplates: Record<QuestionType, (q: Question) => string[]> = {
     [QuestionType.DecimalMultiplication2Digit]: getDecimalMultiplication2DigitExplanation,
     [QuestionType.FractionAdditionSimpleDenominators]: getFractionAdditionExplanation,
     [QuestionType.FractionAdditionUnlikeDenominators]: getFractionAdditionExplanation,
-    [QuestionType.FractionAdditionMixedNumbers]: getMixedNumberExplanation,
+    [QuestionType.FractionAdditionMixedNumbers]: getFractionAdditionMixedNumbersExplanation,
     [QuestionType.FractionSubtractionSimpleDenominators]: getFractionSubtractionExplanation,
     [QuestionType.FractionSubtractionUnlikeDenominators]: getFractionSubtractionExplanation,
     [QuestionType.FractionSubtractionMixedNumbers]: getMixedNumberExplanation,
