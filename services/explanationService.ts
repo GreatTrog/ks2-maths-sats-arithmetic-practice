@@ -574,33 +574,66 @@ const getPowersIndicesExplanation = (q: Question): string[] => {
     ]
 };
 
+import { getPercentageStrategy } from './percentageStrategy';
+
 const getPercentagesExplanation = (q: Question): string[] => {
-    const [percentageStr, amount] = getOperands(q);
+    const [percentageStr, amountStr] = getOperands(q);
     const percentage = parseInt(percentageStr);
-    let steps: string[] = [];
-    if (percentage === 50) {
-        steps = [
-            `**Understand the percentage.** 50% means a half. To find 50% of something, you just need to divide it by 2.`,
-            `**Calculate.** **${amount} ÷ 2 = ${q.answer}**.`
-        ];
-    } else if (percentage === 25) {
-        steps = [
-            `**Understand the percentage.** 25% is the same as a quarter (1/4). To find 25% of something, you need to divide it by 4.`,
-            `**Calculate.** You can do this by halving the number, and then halving it again. **${amount} ÷ 2 = ${parseInt(amount) / 2}**. Then **${parseInt(amount) / 2} ÷ 2 = ${q.answer}**.`
-        ];
-    } else if (percentage === 75) {
-        steps = [
-            `**Understand the percentage.** 75% is the same as three quarters (3/4). To find this, we first find one quarter (25%) and then multiply that by 3.`,
-            `**Find one quarter.** First, divide **${amount}** by 4. This gives you **${parseInt(q.answer) / 3}**.`,
-            `**Find three quarters.** Now, multiply the answer from the previous step by 3. **${parseInt(q.answer) / 3} × 3 = ${q.answer}**.`
-        ];
-    } else { // 10, 20 etc
-        steps = [
-            `**Find 10% first.** 10% is easy to find. You just divide the amount by 10. For **${amount}**, 10% is **${parseInt(amount) / 10}**.`,
-            `**Build up to the target percentage.** Our question asks for **${percentage}%**. We can get this by multiplying our 10% value. Since **${percentage}** is ${percentage / 10} times bigger than 10, we multiply our 10% value by ${percentage / 10}.`,
-            `**Calculate.** **${parseInt(amount) / 10} × ${percentage / 10} = ${q.answer}**.`
-        ];
+    const amount = parseFloat(amountStr);
+
+    const strategy = getPercentageStrategy(percentage);
+
+    // Helper to fix floating point issues
+    const formatNumber = (num: number) => parseFloat(Number(num).toPrecision(12));
+
+    const formatPart = (val: number, count: number) => count > 1 ? `${count} x ${val}%` : `${val}%`;
+    const calcPart = (val: number, whole: number) => formatNumber((val / 100) * whole);
+
+    const steps: string[] = [];
+
+    if (strategy.method === 'addition') {
+        const partsDesc = strategy.components.map(p => formatPart(p.value, p.count)).join(' and ');
+        steps.push(`**Strategy: Break it down.** finding **${percentage}%** is easier if we split it into chunks: **${partsDesc}**.`);
+
+        let currentTotal = 0;
+        strategy.components.forEach(p => {
+            const chunkVal = calcPart(p.value, amount);
+            const totalChunkVal = formatNumber(chunkVal * p.count);
+            if (p.count === 1) {
+                steps.push(`**Find ${p.value}%.** ${p.value}% of ${amount} is **${chunkVal}**.`);
+            } else {
+                steps.push(`**Find ${p.value}%.** ${p.value}% of ${amount} is **${chunkVal}**. We need ${p.count} of these, so ${p.count} × ${chunkVal} = **${totalChunkVal}**.`);
+            }
+            currentTotal = formatNumber(currentTotal + totalChunkVal);
+        });
+        const safeAnswer = formatNumber(parseFloat(q.answer));
+        steps.push(`**Add them up.** Total: **${currentTotal}**. Answer: **${safeAnswer}**.`);
+    } else {
+        const baseParam = strategy.base;
+        const diffDesc = strategy.components.map(p => formatPart(p.value, p.count)).join(' and ');
+
+        steps.push(`**Strategy: Subtract from ${baseParam}%.** It's easier to find **${baseParam}%** first, then subtract **${diffDesc}**.`);
+
+        const baseVal = calcPart(baseParam, amount);
+        steps.push(`**Start with ${baseParam}%.** ${baseParam}% of ${amount} is **${baseVal}**.`);
+
+        let subtractTotal = 0;
+        strategy.components.forEach(p => {
+            const chunkVal = calcPart(p.value, amount);
+            const totalChunkVal = formatNumber(chunkVal * p.count);
+            if (p.count === 1) {
+                steps.push(`**Find ${p.value}%.** ${p.value}% of ${amount} is **${chunkVal}**.`);
+            } else {
+                steps.push(`**Find ${p.value}%.** ${p.value}% of ${amount} is **${chunkVal}**. ${p.count} × ${chunkVal} = **${totalChunkVal}**.`);
+            }
+            subtractTotal = formatNumber(subtractTotal + totalChunkVal);
+        });
+
+        const finalVal = formatNumber(baseVal - subtractTotal);
+        const safeAnswer = formatNumber(parseFloat(q.answer));
+        steps.push(`**Subtract.** ${baseVal} - ${subtractTotal} = **${finalVal}**. Answer: **${safeAnswer}**.`);
     }
+
     return steps;
 };
 

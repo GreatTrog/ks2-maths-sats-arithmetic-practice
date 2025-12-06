@@ -416,7 +416,9 @@ const generatePercentages = (difficulty: number = 0): Question => {
     }
 
     const num = randomInt(2, 20) * 10;
-    const answer = (percentage / 100) * num;
+    const answerVal = (percentage / 100) * num;
+    // Fix floating point precision (e.g. 26.4000000002)
+    const answer = parseFloat(answerVal.toFixed(10));
     return { type: QuestionType.Percentages, text: `${percentage}% of ${num} =`, answer: answer.toString() };
 };
 
