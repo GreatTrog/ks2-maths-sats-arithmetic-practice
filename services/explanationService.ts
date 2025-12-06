@@ -362,14 +362,54 @@ const getDecimalMultiplication2DigitExplanation = (q: Question): string[] => {
 };
 
 const getFractionMultiplication2DigitExplanation = (q: Question): string[] => {
-    const [mixedNum, multiplier] = getOperands(q);
+    const [mixedNum, multiplierStr] = getOperands(q);
 
-    return [
-        `**Convert to an improper fraction.** First, turn the mixed number **${mixedNum}** into an improper (top-heavy) fraction. Multiply the whole number by the denominator, then add the numerator. Keep the same denominator.`,
-        `**Multiply the numerator.** Now multiply the numerator of your improper fraction by the whole number **${multiplier}**. The denominator stays the same.`,
-        `**Simplify if needed.** If the resulting fraction can be simplified, divide both the numerator and denominator by their greatest common factor.`,
-        `**Convert back to a mixed number.** Divide the numerator by the denominator. The whole number part is the quotient, and the remainder becomes the new numerator. The final answer is **${q.answer}**.`
-    ];
+    // Parse operands
+    const multiplier = parseInt(multiplierStr); // e.g. 34
+
+    // Helper to parse mixed number strings like "4 4/9"
+    const parseMixed = (str: string) => {
+        const parts = str.trim().split(' ');
+        if (parts.length === 2) {
+            return { w: parseInt(parts[0]), ...parseSimpleFraction(parts[1])! };
+        }
+        if (str.includes('/')) {
+            return { w: 0, ...parseSimpleFraction(str)! };
+        }
+        return { w: parseInt(str), n: 0, d: 1 };
+    };
+
+    const { w, n, d } = parseMixed(mixedNum);
+
+    const steps: string[] = [];
+
+    // Step 1: Partition
+    steps.push(`**Draw the Area Model.** Split the mixed number **${mixedNum}** into its whole part (**${w}**) and fraction part (**${n}/${d}**). Draw a rectangle with **${multiplier}** on the side and split the top into **${w}** and **${n}/${d}**.`);
+
+    // Step 2: Multiply Whole
+    const wholeRes = w * multiplier;
+    steps.push(`**Multiply the whole number.** Calculate the area of the large section (Rectangle A): multiply the side by the whole number top. **${multiplier} × ${w} = ${wholeRes}**.`);
+
+    // Step 3: Multiply Fraction
+    const fracNumRes = n * multiplier;
+    // 136/9
+    const fracWhole = Math.floor(fracNumRes / d);
+    const fracRem = fracNumRes % d;
+    const fracMixedStr = fracWhole > 0 ? (fracRem === 0 ? `${fracWhole}` : `${fracWhole} ${fracRem}/${d}`) : `${fracRem}/${d}`;
+
+    // "136/9 = 15 1/9"
+    steps.push(`**Multiply the fraction.** Calculate the area of the small section (Rectangle B): **${multiplier} × ${n}/${d}**. \nMultiply the whole number by the numerator: ${multiplier} × ${n} = ${fracNumRes}. \n${fracNumRes}/${d} converts to **${fracMixedStr}**.`);
+
+    // Step 4: Total
+    // We assume q.answer is correct
+    const totalW = wholeRes + fracWhole;
+    // If fracRem is 0, we just have integers. 
+    // If not, we have a mixed number.
+    // The simplified answer might be different from our raw sum if simplication happens.
+    // But q.answer should match the final value.
+    steps.push(`**Add the areas.** Finally, add the two areas together for the total: **${wholeRes} + ${fracMixedStr} = ${q.answer}**.`);
+
+    return steps;
 };
 
 const getFractionsOfAmountsExplanation = (q: Question): string[] => {

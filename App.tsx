@@ -15,6 +15,7 @@ import MultiplyByPowersOfTenVisualizer from './components/visualizers/MultiplyBy
 import DivideByPowersOfTenVisualizer from './components/visualizers/DivideByPowersOfTenVisualizer';
 import PowersIndicesVisualizer from './components/visualizers/PowersIndicesVisualizer';
 import FractionSubtractionVisualizer from './components/visualizers/FractionSubtractionVisualizer';
+import FractionMultiplication2DigitVisualizer from './components/visualizers/FractionMultiplication2DigitVisualizer';
 import DecimalAdditionVisualizer from './components/visualizers/DecimalAdditionVisualizer';
 import DecimalSubtractionVisualizer from './components/visualizers/DecimalSubtractionVisualizer';
 import DecimalMultiplicationVisualizer from './components/visualizers/DecimalMultiplicationVisualizer';
@@ -306,6 +307,9 @@ const StepByStepGuidancePanel: React.FC<{
             )}
             {question.type === QuestionType.FractionMultiplicationMixedNumbers && (
               <MixedNumberMultiplicationVisualizer question={question} stepIndex={stepIndex} />
+            )}
+            {question.type === QuestionType.FractionMultiplication2Digit && (
+              <FractionMultiplication2DigitVisualizer question={question} stepIndex={stepIndex} />
             )}
             {question.type === QuestionType.Percentages && (
               <PercentagesOfAmountsVisualizer question={question} stepIndex={stepIndex} />
