@@ -553,6 +553,75 @@ const getFractionMultiplicationMixedNumbersExplanation = (q: Question): string[]
     return steps;
 };
 
+const getFractionSubtractionMixedNumbersExplanation = (q: Question): string[] => {
+    // Expected: "5 2/4 - 2 3/4"
+    const [mixed1, mixed2] = getOperands(q);
+
+    const parseMixed = (str: string) => {
+        const parts = str.trim().split(' ');
+        if (parts.length === 2) {
+            return { w: parseInt(parts[0]), ...parseSimpleFraction(parts[1])! };
+        }
+        if (str.includes('/')) {
+            return { w: 0, ...parseSimpleFraction(str)! };
+        }
+        return { w: parseInt(str), n: 0, d: 1 };
+    };
+
+    let m1 = parseMixed(mixed1);
+    let m2 = parseMixed(mixed2);
+
+    const steps: string[] = [];
+
+    // 1. Common Denominator Check
+    if (m1.d !== m2.d) {
+        const commonD = (m1.d * m2.d) / gcd(m1.d, m2.d);
+        const factor1 = commonD / m1.d;
+        const factor2 = commonD / m2.d;
+
+        m1 = { ...m1, n: m1.n * factor1, d: commonD };
+        m2 = { ...m2, n: m2.n * factor2, d: commonD };
+
+        steps.push(`**Find a common denominator.** To subtract these mixed numbers, the fractions must have the same denominator (bottom number). A common denominator is **${commonD}**. \nOur numbers become **${m1.w} ${m1.n}/${commonD}** and **${m2.w} ${m2.n}/${commonD}**.`);
+    } else {
+        steps.push(`**Set up the problem.** We are subtracting **${mixed2}** from **${mixed1}**. The denominators are already the same, which is great!`);
+    }
+
+    // 2. Regrouping Check
+    if (m1.n < m2.n) {
+        // Need to borrow
+        const newN = m1.n + m1.d;
+        const newW = m1.w - 1;
+        steps.push(`**Borrow a whole.** Look at the fractions: we can't subtract **${m2.n}/${m2.d}** from **${m1.n}/${m1.d}** because ${m1.n} is smaller than ${m2.n}. \nWe borrow 1 whole from **${m1.w}**, so it becomes **${newW}**. We turn that whole into **${m1.d}/${m1.d}** and add it to our fraction. \nNow we have **${newW} ${newN}/${m1.d}**.`);
+
+        m1 = { ...m1, w: newW, n: newN };
+    } else {
+        steps.push(`**Check the fractions.** We can subtract **${m2.n}/${m2.d}** from **${m1.n}/${m1.d}** easily because ${m1.n} is larger than ${m2.n}. No need to borrow!`);
+    }
+
+    // 3. Subtract Fractions
+    const resN = m1.n - m2.n;
+    steps.push(`**Subtract the fractions.** Now subtract the numerators: **${m1.n} - ${m2.n} = ${resN}**. The fraction part of our answer is **${resN}/${m1.d}**.`);
+
+    // 4. Subtract Wholes
+    const resW = m1.w - m2.w;
+    steps.push(`**Subtract the whole numbers.** Now subtract the whole numbers: **${m1.w} - ${m2.w} = ${resW}**. \nSo our mixed number is **${resW} ${resN}/${m1.d}**.`);
+
+    // 5. Final Answer (Simplify) (Check against Q.answer)
+    // The question service generates already simplified answers.
+    // If our calculated result needs simplification, we should mention it.
+    const commonFactor = gcd(resN, m1.d);
+    if (commonFactor > 1) {
+        const simN = resN / commonFactor;
+        const simD = m1.d / commonFactor;
+        steps.push(`**Simplify.** Finally, simplify the fraction by dividing top and bottom by ${commonFactor}. **${resN}/${m1.d}** becomes **${simN}/${simD}**. The final answer is **${resW === 0 ? '' : resW + ' '}${simN}/${simD}**.`);
+    } else {
+        steps.push(`**Final Answer.** The fraction cannot be simplified further. The answer is **${q.answer}**.`);
+    }
+
+    return steps;
+};
+
 const getMixedNumberExplanation = (q: Question): string[] => {
     return [
         `**Convert to improper fractions.** The easiest way to work with mixed numbers (like **1 ½**) is to turn them into 'top-heavy' or improper fractions first. To do this, multiply the whole number by the denominator, then add the numerator. The denominator stays the same.`,
@@ -671,7 +740,7 @@ const explanationTemplates: Record<QuestionType, (q: Question) => string[]> = {
     [QuestionType.FractionAdditionMixedNumbers]: getFractionAdditionMixedNumbersExplanation,
     [QuestionType.FractionSubtractionSimpleDenominators]: getFractionSubtractionExplanation,
     [QuestionType.FractionSubtractionUnlikeDenominators]: getFractionSubtractionExplanation,
-    [QuestionType.FractionSubtractionMixedNumbers]: getMixedNumberExplanation,
+    [QuestionType.FractionSubtractionMixedNumbers]: getFractionSubtractionMixedNumbersExplanation,
     [QuestionType.FractionMultiplication]: getFractionMultiplicationExplanation,
     [QuestionType.FractionMultiplicationMixedNumbers]: getFractionMultiplicationMixedNumbersExplanation,
     [QuestionType.FractionMultiplication2Digit]: getFractionMultiplication2DigitExplanation,
