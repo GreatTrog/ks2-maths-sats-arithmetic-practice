@@ -295,7 +295,8 @@ const generateFractionMultiplicationMixedNumbers = (): Question => {
 
 const generateFractionDivision = (): Question => {
     const den1 = randomInt(2, 10);
-    const num1 = randomInt(1, 9);
+    // Ensure proper fraction (n < d)
+    const num1 = randomInt(1, den1 - 1);
     const divisor = randomInt(2, 5);
 
     const resNum = num1;

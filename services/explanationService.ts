@@ -474,14 +474,34 @@ const getFractionMultiplicationExplanation = (q: Question): string[] => {
 };
 
 const getFractionDivisionExplanation = (q: Question): string[] => {
-    const [f1, divisor] = getOperands(q);
-    return [
-        `**The Rule: Keep, Change, Flip!** When you divide a fraction by a whole number, we use a special rule. A whole number like **${divisor}** can be written as a fraction: **${divisor}/1**.`,
-        `**KEEP:** Keep the first fraction the same: **${f1}**.`,
-        `**CHANGE:** Change the division sign (÷) to a multiplication sign (×).`,
-        `**FLIP:** Flip the second fraction. So **${divisor}/1** becomes **1/${divisor}**. This is called finding the 'reciprocal'.`,
-        `**Multiply!** Now you have a standard fraction multiplication problem. Multiply the numerators and the denominators to get the answer. Simplify if needed. The final answer is **${q.answer}**.`
+    const [f1, divisorStr] = getOperands(q);
+    const divisor = parseInt(divisorStr);
+    const { n, d } = parseSimpleFraction(f1) || { n: 0, d: 1 };
+
+    const isMultiple = n % divisor === 0;
+
+    const steps = [
+        `**Understand the problem.** We have **${f1}** and we want to share it equally into **${divisor}** groups.`
     ];
+
+    steps.push(`**Draw the whole.** Start with a bar split into **${d}** equal parts. Shade **${n}** of them to represent **${f1}**.`);
+
+    if (isMultiple) {
+        // Direct Division
+        const resN = n / divisor;
+        steps.push(`**Share the parts.** Since the numerator **${n}** can be divided by **${divisor}**, we can share the shaded parts directly!`);
+        steps.push(`**Result.** **${n}** parts shared into **${divisor}** groups means each group gets **${resN}** part(s). The size of the parts (denominator) stays the same. The answer is **${resN}/${d}**.`);
+    } else {
+        // Equivalent Fraction (Cut)
+        const newN = n * divisor;
+        const newD = d * divisor;
+
+        steps.push(`**Cut vertically!** We can't share **${n}** parts into **${divisor}** groups equally yet. So, we split each vertical part into **${divisor}** smaller pieces. This gives us **${divisor}** times as many parts.`);
+        steps.push(`**Find equivalent fraction.** Now we have **${newN}** small shaded pieces out of **${newD}** total pieces. This is the same amount as **${f1}**, but now we can share it easily.`);
+        steps.push(`**Share and Solve.** Share the **${newN}** shaded pieces into **${divisor}** groups. Each group gets **${n}** pieces. The answer is **${n}/${newD}**.`);
+    }
+
+    return steps;
 };
 
 const getFractionAdditionMixedNumbersExplanation = (q: Question): string[] => {
