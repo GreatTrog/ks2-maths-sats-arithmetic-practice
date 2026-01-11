@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Question, QuestionType } from './types';
+import { Question, QuestionType, TestQuestion, TestQuestionMark, TestQuestionResponse, TestResponseEntry, TestSession } from './types';
 import { generateQuestionByType, generateNewQuestion } from './services/questionService';
+import { generateTestPaper, TEST_PAPER_VERSION } from './services/testPaperService';
 import { getBakedExplanation } from './services/explanationService';
 import AdditionVisualizer from './components/visualizers/AdditionVisualizer';
 import SubtractionVisualizer from './components/visualizers/SubtractionVisualizer';
@@ -67,6 +68,23 @@ const PracticeTracker: React.FC<{ count: number }> = ({ count }) => (
   </div>
 );
 
+const renderPromptParts = (text: string) => {
+  const parts = text.split(BLANK_TOKEN);
+  if (parts.length === 1) return text;
+  return (
+    <>
+      {parts.map((part, index) => (
+        <React.Fragment key={`${part}-${index}`}>
+          {part}
+          {index < parts.length - 1 && (
+            <span className="inline-block align-middle border-4 border-blue-600 w-24 h-12 mx-2 rounded-sm" />
+          )}
+        </React.Fragment>
+      ))}
+    </>
+  );
+};
+
 const QuestionDisplay: React.FC<{ question: Question }> = ({ question }) => {
   const isPlaceValue = question.type === QuestionType.PlaceValue;
   const isBidmas = question.type === QuestionType.BIDMAS;
@@ -81,7 +99,7 @@ const QuestionDisplay: React.FC<{ question: Question }> = ({ question }) => {
             : 'text-5xl md:text-7xl'
           } font-black text-gray-800 tracking-tight mb-4 font-mono`}
       >
-        {question.text}
+        {renderPromptParts(question.text)}
       </div>
       {question.type.includes('Fraction') && (
         <div className="text-gray-500 text-lg italic">
@@ -393,6 +411,362 @@ const formatCountdown = (seconds: number) => {
   return `${m}:${s.toString().padStart(2, '0')}`;
 };
 
+const TEST_SESSION_STORAGE_KEY = 'ks2-sats-test-session-v1';
+const TEST_MODE_VERSION = 'practice-test-v1';
+const TEST_DURATION_OPTIONS = [
+  { label: '30:00', seconds: 30 * 60 },
+  { label: '32:30', seconds: 32 * 60 + 30 },
+  { label: '35:00', seconds: 35 * 60 },
+  { label: '37:30', seconds: 37 * 60 + 30 },
+  { label: '40:00', seconds: 40 * 60 },
+];
+
+const normalizeInput = (text: string) => text.trim().replace(/,/g, '').replace(/\s+/g, ' ');
+
+const normalizeNumericString = (text: string) => {
+  const clean = normalizeInput(text);
+  if (!/^-?\d+(\.\d+)?$/.test(clean)) return clean;
+  const parsed = Number(clean);
+  if (Number.isNaN(parsed)) return clean;
+  return parsed.toString();
+};
+
+const parseRemainderAnswer = (text: string) => {
+  const match = normalizeInput(text)
+    .replace(/,/g, '')
+    .match(/^(\d+)\s*(?:r\.?|rem|remainder)\s*(\d+)$/i);
+  if (!match) return null;
+  return { quotient: match[1], remainder: match[2] };
+};
+
+const BLANK_TOKEN = '[blank]';
+
+const parseDivisionPrompt = (prompt: string) => {
+  const match = prompt.replace(/,/g, '').match(/(\d+)\s*÷\s*(\d+)/);
+  if (!match) return null;
+  return { dividend: Number(match[1]), divisor: Number(match[2]) };
+};
+
+const fractionToDecimal = (text: string) => {
+  const fraction = parseFraction(text);
+  if (!fraction) return null;
+  return fraction.n / fraction.d;
+};
+
+const isFractionQuestionType = (type: QuestionType) => [
+  QuestionType.FractionAdditionSimpleDenominators,
+  QuestionType.FractionAdditionUnlikeDenominators,
+  QuestionType.FractionAdditionMixedNumbers,
+  QuestionType.FractionSubtractionSimpleDenominators,
+  QuestionType.FractionSubtractionUnlikeDenominators,
+  QuestionType.FractionSubtractionMixedNumbers,
+  QuestionType.FractionMultiplication,
+  QuestionType.FractionMultiplicationMixedNumbers,
+  QuestionType.FractionDivision,
+  QuestionType.FractionMultiplication2Digit,
+].includes(type);
+
+const escapeHtml = (text: string) => text
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+const openPrintWindow = (title: string, bodyHtml: string) => {
+  const html = `<!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>${escapeHtml(title)}</title>
+      </head>
+      <body>
+        ${bodyHtml || '<p>Nothing to print yet.</p>'}
+      </body>
+    </html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
+  if (!win) {
+    URL.revokeObjectURL(url);
+    return;
+  }
+  win.onload = () => {
+    win.focus();
+    win.print();
+    URL.revokeObjectURL(url);
+  };
+};
+
+const normalizePromptSymbols = (text: string) =>
+  text
+    .replace(/\u0627-/g, '\u00d7')
+    .replace(/\u0627\u0652/g, '\u00f7')
+    .replace(/ƒ"'/g, '⟌')
+    .replace(/\u2502/g, '⟌');
+
+const formatDate = (isoDate?: string) => {
+  const date = isoDate ? new Date(isoDate) : new Date();
+  return date.toLocaleDateString('en-GB');
+};
+
+const computeTestMarks = (session: TestSession): { marks: TestQuestionMark[]; total: number } => {
+  const marks: TestQuestionMark[] = session.questions.map((question) => {
+    const response = session.responses[question.questionId]?.latest;
+    if (!response || !response.rawInput.trim()) {
+      return { questionId: question.questionId, slotNumber: question.slotNumber, marksAwarded: 0 };
+    }
+
+    let isCorrect = false;
+    if (isFractionQuestionType(question.type)) {
+      isCorrect = areFractionsEquivalent(response.rawInput, question.correctAnswer);
+    } else {
+      const expectedRemainder = parseRemainderAnswer(question.correctAnswer);
+      const givenRemainder = parseRemainderAnswer(response.rawInput);
+      if (expectedRemainder) {
+        const remainderMatches = Boolean(
+          givenRemainder &&
+            expectedRemainder.quotient === givenRemainder.quotient &&
+            expectedRemainder.remainder === givenRemainder.remainder,
+        );
+
+        const promptDivision = parseDivisionPrompt(question.prompt);
+        const expectedValue = promptDivision ? promptDivision.dividend / promptDivision.divisor : null;
+        const numericAnswer = Number(normalizeNumericString(response.normalizedInput || response.rawInput));
+        const decimalMatches = Number.isFinite(numericAnswer) && expectedValue !== null
+          ? Math.abs(numericAnswer - expectedValue) < 1e-9
+          : false;
+
+        const fractionValue = fractionToDecimal(response.rawInput);
+        const fractionMatches = expectedValue !== null && fractionValue !== null
+          ? Math.abs(fractionValue - expectedValue) < 1e-9
+          : false;
+
+        isCorrect = remainderMatches || decimalMatches || fractionMatches;
+      } else {
+        const expected = normalizeNumericString(question.correctAnswer);
+        const given = normalizeNumericString(response.normalizedInput || response.rawInput);
+        isCorrect = expected === given;
+      }
+    }
+
+    return {
+      questionId: question.questionId,
+      slotNumber: question.slotNumber,
+      marksAwarded: isCorrect ? question.markValue : 0,
+    };
+  });
+
+  const total = marks.reduce((sum, mark) => sum + mark.marksAwarded, 0);
+  return { marks, total };
+};
+
+const formatPromptHtml = (text: string) => escapeHtml(text).split(BLANK_TOKEN).join('<span class="blank-box"></span>');
+
+const buildTestPaperHtml = (session: TestSession) => {
+  const questionsHtml = session.questions.map((question) => {
+    const gridId = `grid-${question.slotNumber}`;
+    return `
+    <div class="question">
+      <div class="q-number">${question.slotNumber}</div>
+      <div class="q-main">
+        <div class="prompt">${formatPromptHtml(question.prompt)}</div>
+        <div class="grid">
+          <svg class="grid-svg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+            <defs>
+              <pattern id="${gridId}" width="22" height="22" patternUnits="userSpaceOnUse">
+                <path d="M 22 0 L 0 0 0 22" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="1" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#${gridId})" />
+          </svg>
+        </div>
+      </div>
+      <div class="q-mark">${question.markValue} mark${question.markValue > 1 ? 's' : ''}</div>
+    </div>
+  `;
+  }).join('');
+
+  return `
+    <style>
+      @page { size: A4 portrait; margin: 18mm; }
+      body { font-family: "Georgia", "Times New Roman", serif; color: #111; margin: 24px; }
+      .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 18px; }
+      .title { font-size: 24px; font-weight: 700; }
+      .meta { font-size: 14px; }
+      .question { display: grid; grid-template-columns: 48px 1fr 90px; border: 1px solid #444; margin-bottom: 12px; min-height: 150px; break-inside: avoid; page-break-inside: avoid; }
+      .q-number { background: #dfe6f5; font-weight: 700; font-size: 18px; display: flex; align-items: flex-start; justify-content: center; padding-top: 10px; border-right: 1px solid #444; }
+      .q-main { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+      .prompt { font-size: 20px; font-weight: 700; }
+      .grid { flex: 1; min-height: 110px; border-top: 1px solid #888; }
+      .grid-svg { width: 100%; height: 100%; display: block; }
+      .blank-box { display: inline-block; width: 90px; height: 36px; border: 3px solid #2563eb; vertical-align: middle; margin: 0 8px; }
+      @media print {
+        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .question:nth-of-type(4n) { break-after: page; page-break-after: always; }
+      }
+      .q-mark { background: #dfe6f5; border-left: 1px solid #444; display: flex; align-items: flex-end; justify-content: center; font-size: 12px; font-weight: 700; padding-bottom: 10px; }
+    </style>
+    <div class="header">
+      <div>
+        <div class="title">KS2 Arithmetic Practice Test</div>
+        <div class="meta">Name: ____________________________</div>
+      </div>
+      <div class="meta">Date: ${formatDate()}</div>
+    </div>
+    ${questionsHtml}
+  `;
+};
+
+const buildAnswerSheetHtml = (session: TestSession) => {
+  const rows = session.questions.map((question) => `
+    <tr>
+      <td>${question.slotNumber}</td>
+      <td>${escapeHtml(question.correctAnswer)}</td>
+      <td>${question.markValue}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <style>
+      body { font-family: "Georgia", "Times New Roman", serif; color: #111; margin: 24px; }
+      h1 { font-size: 24px; margin-bottom: 8px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #333; padding: 8px; text-align: left; font-size: 14px; }
+      th { background: #f2f2f2; }
+    </style>
+    <h1>Answer Sheet</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>Question</th>
+          <th>Correct answer</th>
+          <th>Marks</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  `;
+};
+
+const buildCombinedPaperHtml = (session: TestSession) => `
+  <style>
+    .page-break { break-before: page; page-break-before: always; }
+  </style>
+  ${buildTestPaperHtml(session)}
+  <div class="page-break"></div>
+  ${buildAnswerSheetHtml(session)}
+`;
+
+const buildShortFormPaperHtml = (session: TestSession) => {
+  const rows = session.questions.map((question) => `
+    <tr>
+      <td class="q-num">${question.slotNumber}</td>
+      <td class="q-prompt">${formatPromptHtml(question.prompt)}</td>
+      <td class="q-box"><span class="blank-box short-box"></span></td>
+      <td class="q-mark">${question.markValue}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <style>
+      @page { size: A4 portrait; margin: 12mm; }
+      body { font-family: "Georgia", "Times New Roman", serif; color: #111; margin: 12px; }
+      .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #111; padding-bottom: 6px; margin-bottom: 10px; }
+      .title { font-size: 20px; font-weight: 700; }
+      .meta { font-size: 12px; }
+      table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      th, td { border: 1px solid #333; padding: 6px; vertical-align: middle; }
+      th { background: #f2f2f2; text-align: left; }
+      .q-num { width: 36px; text-align: center; font-weight: 700; }
+      .q-prompt { font-weight: 600; }
+      .q-box { width: 90px; text-align: center; }
+      .q-mark { width: 40px; text-align: center; font-weight: 700; }
+      .short-box { width: 70px; height: 28px; border-width: 2px; }
+      @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    </style>
+    <div class="header">
+      <div>
+        <div class="title">KS2 Arithmetic Short Form</div>
+        <div class="meta">Name: ____________________________</div>
+      </div>
+      <div class="meta">Date: ${formatDate()}</div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Q</th>
+          <th>Question</th>
+          <th>Answer</th>
+          <th>Marks</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  `;
+};
+
+const buildSummaryHtml = (session: TestSession) => {
+  const marksLookup = new Map(session.marks?.map((mark) => [mark.questionId, mark.marksAwarded]) ?? []);
+  const rows = session.questions.map((question) => {
+    const response = session.responses[question.questionId]?.latest;
+    const pupilAnswer = response?.rawInput ?? '';
+    const awarded = marksLookup.get(question.questionId) ?? 0;
+    return `
+      <tr>
+        <td>${question.slotNumber}</td>
+        <td>${formatPromptHtml(question.prompt)}</td>
+        <td>${question.markValue}</td>
+        <td>${escapeHtml(pupilAnswer)}</td>
+        <td>${escapeHtml(question.correctAnswer)}</td>
+        <td>${awarded}</td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <style>
+      body { font-family: "Georgia", "Times New Roman", serif; color: #111; margin: 24px; }
+      .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 18px; }
+      .title { font-size: 24px; font-weight: 700; }
+      .meta { font-size: 14px; }
+      table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      th, td { border: 1px solid #333; padding: 6px; text-align: left; vertical-align: top; }
+      th { background: #f2f2f2; }
+    </style>
+    <div class="header">
+      <div>
+        <div class="title">Practice Test Summary</div>
+        <div class="meta">Name: ____________________________</div>
+        <div class="meta">Date: ${formatDate()}</div>
+      </div>
+      <div class="meta">
+        Duration: ${formatCountdown(session.durationSeconds)}<br/>
+        Score: ${session.totalMarksAwarded ?? 0} / 40
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Q</th>
+          <th>Prompt</th>
+          <th>Marks</th>
+          <th>Pupil answer</th>
+          <th>Correct answer</th>
+          <th>Awarded</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  `;
+};
 
 // Mastery Popup Component
 const MasteryPopup: React.FC<{
@@ -469,6 +843,15 @@ export default function App() {
     { label: '2m', seconds: 120 },
   ];
 
+  // Test Mode State
+  const [mode, setMode] = useState<'practice' | 'test'>('practice');
+  const [testSession, setTestSession] = useState<TestSession | null>(null);
+  const [testCurrentIndex, setTestCurrentIndex] = useState(0);
+  const [testAnswerInput, setTestAnswerInput] = useState('');
+  const [testDurationSeconds, setTestDurationSeconds] = useState(TEST_DURATION_OPTIONS[0].seconds);
+  const [testSecondsRemaining, setTestSecondsRemaining] = useState(0);
+  const [showTestDurationPrompt, setShowTestDurationPrompt] = useState(false);
+
   // Speech Synthesis
   const [britishVoice, setBritishVoice] = useState<SpeechSynthesisVoice | null>(null);
 
@@ -490,9 +873,64 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const storedSession = localStorage.getItem(TEST_SESSION_STORAGE_KEY);
+    if (!storedSession) return;
+    try {
+      const parsed: TestSession = JSON.parse(storedSession);
+      parsed.questions = parsed.questions.map((question) => ({
+        ...question,
+        prompt: normalizePromptSymbols(question.prompt),
+      }));
+      if (!parsed.completedAt) {
+        const remaining = Math.max(0, Math.floor((new Date(parsed.endsAt).getTime() - Date.now()) / 1000));
+        if (remaining === 0) {
+          const { marks, total } = computeTestMarks(parsed);
+          parsed.marks = marks;
+          parsed.totalMarksAwarded = total;
+          parsed.completedAt = new Date().toISOString();
+          setTestSecondsRemaining(0);
+        } else {
+          setTestSecondsRemaining(remaining);
+        }
+      }
+      setTestSession(parsed);
+      setMode('test');
+      setTestDurationSeconds(parsed.durationSeconds);
+      const firstUnanswered = parsed.questions.findIndex((q) => {
+        const response = parsed.responses[q.questionId]?.latest;
+        return !response || !response.rawInput.trim();
+      });
+      setTestCurrentIndex(firstUnanswered === -1 ? 0 : firstUnanswered);
+    } catch (error) {
+      console.warn('Failed to load test session', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!testSession) return;
+    const updatedQuestions = testSession.questions.map((question) => {
+      const normalizedPrompt = normalizePromptSymbols(question.prompt);
+      return normalizedPrompt === question.prompt ? question : { ...question, prompt: normalizedPrompt };
+    });
+    const hasChanges = updatedQuestions.some((question, index) => question !== testSession.questions[index]);
+    if (hasChanges) {
+      setTestSession({ ...testSession, questions: updatedQuestions });
+    }
+  }, [testSession]);
+
+  useEffect(() => {
+    if (testSession) {
+      localStorage.setItem(TEST_SESSION_STORAGE_KEY, JSON.stringify(testSession));
+    } else {
+      localStorage.removeItem(TEST_SESSION_STORAGE_KEY);
+    }
+  }, [testSession]);
+
   // Timer transition ref
   const timeUpTransitionRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const testInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {
@@ -503,13 +941,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (isAnswering && inputRef.current && !showMasteryPopup) {
+    if (mode === 'practice' && isAnswering && inputRef.current && !showMasteryPopup) {
       // Small timeout to ensure DOM is ready and transition is complete
       setTimeout(() => {
         inputRef.current?.focus();
       }, 50);
     }
-  }, [currentQuestion, isAnswering, showMasteryPopup]);
+  }, [currentQuestion, isAnswering, showMasteryPopup, mode]);
+
+  useEffect(() => {
+    if (mode === 'test' && testInputRef.current && testSession && !testSession.completedAt) {
+      setTimeout(() => {
+        testInputRef.current?.focus();
+      }, 50);
+    }
+  }, [mode, testCurrentIndex, testSession?.completedAt, testSession]);
 
   const speakText = useCallback((text: string) => {
     if (!('speechSynthesis' in window) || !text) return;
@@ -549,6 +995,71 @@ export default function App() {
       startNewQuestion();
     }
   }, [practiceState, startNewQuestion]);
+
+  const createNewTestSession = useCallback((durationSeconds: number) => {
+    const startedAt = new Date().toISOString();
+    const session: TestSession = {
+      sessionId: (typeof crypto !== 'undefined' && 'randomUUID' in crypto) ? crypto.randomUUID() : `session_${Date.now()}`,
+      startedAt,
+      durationSeconds,
+      endsAt: new Date(Date.now() + durationSeconds * 1000).toISOString(),
+      paperVersion: TEST_PAPER_VERSION,
+      modeVersion: TEST_MODE_VERSION,
+      questions: generateTestPaper(),
+      responses: {},
+      marks: null,
+      totalMarksAwarded: null,
+      completedAt: null,
+    };
+    setTestSession(session);
+    setTestCurrentIndex(0);
+    setTestAnswerInput('');
+    setTestSecondsRemaining(durationSeconds);
+    setMode('test');
+  }, []);
+
+  const updateTestResponse = useCallback((questionId: string, rawInput: string) => {
+    const normalizedInput = normalizeInput(rawInput);
+    const entry: TestResponseEntry = {
+      rawInput,
+      normalizedInput,
+      submittedAt: new Date().toISOString(),
+    };
+
+    setTestSession((prev) => {
+      if (!prev) return prev;
+      const existing = prev.responses[questionId];
+      const history = existing?.history ? [...existing.history] : [];
+      if (existing?.latest && existing.latest.rawInput !== rawInput) {
+        history.push(existing.latest);
+      }
+      const updatedResponses: Record<string, TestQuestionResponse> = {
+        ...prev.responses,
+        [questionId]: {
+          latest: entry,
+          history,
+        },
+      };
+      return { ...prev, responses: updatedResponses };
+    });
+  }, []);
+
+  const finalizeTestSession = useCallback((reason: 'manual' | 'timeout') => {
+    setTestSession((prev) => {
+      if (!prev || prev.completedAt) return prev;
+      const { marks, total } = computeTestMarks(prev);
+      return {
+        ...prev,
+        marks,
+        totalMarksAwarded: total,
+        completedAt: new Date().toISOString(),
+      };
+    });
+    setTestSecondsRemaining(0);
+    if (reason === 'timeout') {
+      speakText("Time's up! Your test has finished.");
+    }
+  }, [speakText]);
 
   const handleTimerExpire = useCallback(() => {
     if (!currentQuestion) return;
@@ -590,7 +1101,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (practiceTimerSeconds <= 0 || !practiceState || !currentQuestion || !isAnswering) {
+    if (mode !== 'practice' || practiceTimerSeconds <= 0 || !practiceState || !currentQuestion || !isAnswering) {
       setSecondsRemaining(practiceTimerSeconds);
       return;
     }
@@ -608,7 +1119,31 @@ export default function App() {
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [practiceTimerSeconds, practiceState, currentQuestion, isAnswering, handleTimerExpire]);
+  }, [practiceTimerSeconds, practiceState, currentQuestion, isAnswering, handleTimerExpire, mode]);
+
+  useEffect(() => {
+    if (!testSession || testSession.completedAt) return;
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.floor((new Date(testSession.endsAt).getTime() - Date.now()) / 1000));
+      setTestSecondsRemaining(remaining);
+      if (remaining <= 0) {
+        finalizeTestSession('timeout');
+      }
+    };
+
+    tick();
+    const intervalId = setInterval(tick, 1000);
+    return () => clearInterval(intervalId);
+  }, [testSession, finalizeTestSession]);
+
+  useEffect(() => {
+    if (!testSession) return;
+    const activeQuestion = testSession.questions[testCurrentIndex];
+    if (!activeQuestion) return;
+    const response = testSession.responses[activeQuestion.questionId]?.latest;
+    setTestAnswerInput(response?.rawInput ?? '');
+  }, [testCurrentIndex, testSession]);
 
 
   const handleCheckAnswer = () => {
@@ -623,6 +1158,7 @@ export default function App() {
       QuestionType.FractionSubtractionMixedNumbers,
       QuestionType.FractionMultiplication,
       QuestionType.FractionMultiplicationMixedNumbers,
+      QuestionType.FractionMultiplication2Digit,
       QuestionType.FractionDivision,
     ];
 
@@ -677,14 +1213,125 @@ export default function App() {
     startNewQuestion();
   };
 
+  const activeTestQuestion = testSession?.questions[testCurrentIndex] ?? null;
+  const activeTestMark = testSession?.marks?.find((mark) => mark.questionId === activeTestQuestion?.questionId);
+  const workingOutQuestion = mode === 'test' && activeTestQuestion
+    ? {
+      type: activeTestQuestion.type,
+      text: activeTestQuestion.prompt,
+      answer: activeTestQuestion.correctAnswer,
+      bidmasMetadata: activeTestQuestion.bidmasMetadata,
+    }
+    : currentQuestion;
+
+  const handleTestAnswerChange = (value: string) => {
+    setTestAnswerInput(value);
+    if (!testSession || testSession.completedAt || !activeTestQuestion) return;
+    updateTestResponse(activeTestQuestion.questionId, value);
+  };
+
+  const handleTestNavigation = (direction: 'next' | 'prev') => {
+    if (!testSession || !activeTestQuestion) return;
+    if (!testSession.completedAt) {
+      updateTestResponse(activeTestQuestion.questionId, testAnswerInput);
+    }
+    setTestCurrentIndex((prev) => {
+      if (direction === 'next') {
+        return Math.min(prev + 1, testSession.questions.length - 1);
+      }
+      return Math.max(prev - 1, 0);
+    });
+  };
+
+  const handleEndTest = () => {
+    if (!testSession) return;
+    if (activeTestQuestion) {
+      updateTestResponse(activeTestQuestion.questionId, testAnswerInput);
+    }
+    finalizeTestSession('manual');
+  };
+
+  const handleStartNewTest = () => {
+    if (testSession) {
+      const shouldReplace = window.confirm('Start a new test? This will replace the current paper and answers.');
+      if (!shouldReplace) return;
+    }
+    setShowTestDurationPrompt(true);
+  };
+
+  const handleConfirmTestDuration = (seconds: number) => {
+    setTestDurationSeconds(seconds);
+    setShowTestDurationPrompt(false);
+    setTimeout(() => {
+      createNewTestSession(seconds);
+    }, 0);
+  };
+
+  const createPrintableSession = (questions: TestQuestion[]) => ({
+    sessionId: 'print',
+    startedAt: new Date().toISOString(),
+    durationSeconds: testDurationSeconds,
+    endsAt: new Date().toISOString(),
+    paperVersion: TEST_PAPER_VERSION,
+    modeVersion: TEST_MODE_VERSION,
+    questions,
+    responses: {},
+    marks: null,
+    totalMarksAwarded: null,
+    completedAt: null,
+  });
+
+  const handlePrintCombinedPaper = () => {
+    const session = testSession ?? createPrintableSession(generateTestPaper());
+    openPrintWindow('KS2 Arithmetic Test Paper', buildCombinedPaperHtml(session));
+  };
+
+  const handlePrintShortFormPaper = () => {
+    const session = testSession ?? createPrintableSession(generateTestPaper());
+    openPrintWindow('KS2 Arithmetic Short Form', buildShortFormPaperHtml(session));
+  };
+
+  const handlePrintSummary = () => {
+    if (!testSession || !testSession.completedAt) return;
+    openPrintWindow('Test Summary', buildSummaryHtml(testSession));
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 font-sans">
-      {showMasteryPopup && (
+      {mode === 'practice' && showMasteryPopup && (
         <MasteryPopup
           onSelectTopic={handleMasterySelectTopic}
           onSelectRandom={handleMasterySelectRandom}
           questionTypes={questionTypes}
         />
+      )}
+      {mode === 'test' && showTestDurationPrompt && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full text-center border-4 border-amber-200">
+            <h2 className="text-2xl font-bold text-secondary mb-2">Choose Test Duration</h2>
+            <p className="text-gray-600 mb-6">Select how long pupils get for this paper.</p>
+            <div className="flex flex-wrap justify-center gap-3">
+              {TEST_DURATION_OPTIONS.map((option) => (
+                <button
+                  key={`test-duration-modal-${option.seconds}`}
+                  onClick={() => handleConfirmTestDuration(option.seconds)}
+                  className={`px-4 py-2 rounded-full text-sm font-bold transition-all duration-200 transform hover:scale-105 ${testDurationSeconds === option.seconds
+                    ? 'bg-secondary text-white shadow-lg ring-2 ring-secondary ring-offset-2'
+                    : 'bg-white text-gray-600 border-2 border-gray-200 hover:border-secondary hover:text-secondary'
+                    }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowTestDurationPrompt(false)}
+              className="mt-6 w-full bg-white hover:bg-gray-50 text-gray-600 font-bold py-3 px-6 rounded-2xl border-2 border-gray-200 transition-all duration-200"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="w-full max-w-2xl text-center mb-8 animate-bounce-slow">
@@ -692,7 +1339,32 @@ export default function App() {
         <p className="text-xl text-gray-600 font-medium">Master your maths skills, one question at a time!</p>
       </div>
 
-      <div className="w-full max-w-xs mx-auto mb-8">
+      <div className="w-full max-w-md mx-auto mb-8">
+        <div className="flex items-center justify-center gap-4">
+          <button
+            onClick={() => setMode('practice')}
+            className={`flex-1 py-3 rounded-2xl font-bold text-lg transition-all ${mode === 'practice'
+              ? 'bg-primary text-white shadow-lg'
+              : 'bg-white text-gray-600 border-2 border-gray-200 hover:border-primary hover:text-primary'
+              }`}
+          >
+            Practice Mode
+          </button>
+          <button
+            onClick={() => setMode('test')}
+            className={`flex-1 py-3 rounded-2xl font-bold text-lg transition-all ${mode === 'test'
+              ? 'bg-secondary text-white shadow-lg'
+              : 'bg-white text-gray-600 border-2 border-gray-200 hover:border-secondary hover:text-secondary'
+              }`}
+          >
+            Practice Test
+          </button>
+        </div>
+      </div>
+
+      {mode === 'practice' && (
+        <>
+          <div className="w-full max-w-xs mx-auto mb-8">
         <label htmlFor="topic-select" className="block text-lg font-bold text-gray-700 mb-2 text-center">
           Choose a topic to practice:
         </label>
@@ -828,11 +1500,184 @@ export default function App() {
       {explanation && currentQuestion && (
         <StepByStepGuidancePanel steps={explanation} onContinue={startPracticeQuestion} speakText={speakText} question={currentQuestion} />
       )}
+        </>
+      )}
+
+      {mode === 'test' && (
+        <div className="w-full max-w-4xl mx-auto">
+          {!testSession && (
+            <div className="bg-white p-8 rounded-3xl shadow-xl border-4 border-amber-200 mb-8">
+              <h2 className="text-2xl font-bold text-secondary mb-2">Practice Test Mode</h2>
+              <p className="text-gray-600 mb-6">
+                Sit a full 36-question paper (40 marks) in the official SATs-style order.
+              </p>
+              <button
+                onClick={handleStartNewTest}
+                className="w-full bg-secondary hover:bg-amber-500 text-white font-black py-4 px-6 rounded-2xl shadow-lg transition-all duration-200 text-xl uppercase tracking-wider"
+              >
+                Start Test
+              </button>
+              <button
+                onClick={handlePrintCombinedPaper}
+                className="mt-3 w-full bg-white hover:bg-gray-50 text-secondary font-bold py-3 px-6 rounded-2xl border-2 border-secondary transition-all duration-200"
+              >
+                Printable paper + answer sheet
+              </button>
+              <button
+                onClick={handlePrintShortFormPaper}
+                className="mt-3 w-full bg-white hover:bg-gray-50 text-secondary font-bold py-3 px-6 rounded-2xl border-2 border-secondary transition-all duration-200"
+              >
+                Short-form paper
+              </button>
+            </div>
+          )}
+
+          {testSession && (
+            <>
+              <div className="bg-white p-6 rounded-3xl shadow-xl border-4 border-amber-200 mb-6">
+                <div className="flex flex-wrap justify-between items-center gap-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-secondary">Practice Test Mode</h2>
+                    <p className="text-sm text-gray-500">
+                      Paper version: {testSession.paperVersion} · Session ID: {testSession.sessionId.slice(0, 8)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs font-bold text-gray-500 uppercase tracking-wide">Time remaining</div>
+                    <div className={`text-3xl font-black ${testSecondsRemaining <= 300 && !testSession.completedAt ? 'text-red-500' : 'text-secondary'}`}>
+                      {formatCountdown(testSecondsRemaining)}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-3">
+                    <button
+                      onClick={handlePrintCombinedPaper}
+                      className="px-4 py-2 rounded-full text-sm font-bold bg-white border-2 border-gray-200 text-gray-600 hover:border-secondary hover:text-secondary transition-all"
+                    >
+                      Printable paper + answer sheet
+                    </button>
+                    <button
+                      onClick={handlePrintShortFormPaper}
+                      className="px-4 py-2 rounded-full text-sm font-bold bg-white border-2 border-gray-200 text-gray-600 hover:border-secondary hover:text-secondary transition-all"
+                    >
+                      Short-form paper
+                    </button>
+                  {!testSession.completedAt && (
+                    <button
+                      onClick={handleEndTest}
+                      className="px-4 py-2 rounded-full text-sm font-bold bg-red-500 text-white hover:bg-red-600 transition-all"
+                    >
+                      End test
+                    </button>
+                  )}
+                  <button
+                    onClick={handleStartNewTest}
+                    className="px-4 py-2 rounded-full text-sm font-bold bg-secondary text-white hover:bg-amber-500 transition-all"
+                  >
+                    Start new test
+                  </button>
+                </div>
+              </div>
+
+              {testSession.completedAt && (
+                <div className="bg-white p-6 rounded-3xl shadow-xl border-4 border-green-200 mb-6">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-green-600">Test complete</h3>
+                      <p className="text-gray-600">Score: {testSession.totalMarksAwarded ?? 0} / 40</p>
+                    </div>
+                    <button
+                      onClick={handlePrintSummary}
+                      className="px-5 py-3 rounded-xl font-bold bg-green-500 text-white hover:bg-green-600 transition-all"
+                    >
+                      Download summary PDF
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {activeTestQuestion && (
+                <div className="bg-white p-8 md:p-10 rounded-3xl shadow-2xl border-b-8 border-gray-200 transition-all duration-300">
+                  <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                    <div>
+                      <div className="text-xs font-bold text-gray-500 uppercase tracking-wide">Question {activeTestQuestion.slotNumber} of {testSession.questions.length}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs font-bold text-gray-500 uppercase tracking-wide">Marks</div>
+                      <div className="text-xl font-black text-gray-700">{activeTestQuestion.markValue}</div>
+                    </div>
+                  </div>
+
+                  <div className="text-center text-4xl md:text-5xl font-black text-gray-800 tracking-tight mb-8 font-mono">
+                    {renderPromptParts(activeTestQuestion.prompt)}
+                  </div>
+
+                  {activeTestQuestion.type.includes('Fraction') && (
+                    <div className="text-center text-gray-500 text-lg italic mb-4">
+                      (Enter fractions like 1/2 or 1 1/2)
+                    </div>
+                  )}
+
+                  <div className="relative">
+                    <input
+                      ref={testInputRef}
+                      type="text"
+                      value={testAnswerInput}
+                      onChange={(e) => handleTestAnswerChange(e.target.value)}
+                      placeholder="Answer"
+                      className="w-full p-5 text-3xl font-bold border-4 rounded-2xl text-center transition-all duration-300 focus:ring-4 outline-none bg-gray-50 text-gray-800 placeholder:text-gray-300 border-gray-200 focus:border-secondary focus:ring-secondary/20"
+                      disabled={Boolean(testSession.completedAt)}
+                    />
+                    <button
+                      onClick={() => setShowCanvas(true)}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-secondary transition-colors p-2"
+                      title="Show Working Out"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {testSession.completedAt && activeTestMark && (
+                    <div className="mt-4 text-center text-lg font-bold text-gray-600">
+                      Marks awarded: {activeTestMark.marksAwarded} / {activeTestQuestion.markValue}
+                    </div>
+                  )}
+
+                  <div className="mt-8 flex gap-4">
+                    <button
+                      onClick={() => handleTestNavigation('prev')}
+                      disabled={testCurrentIndex === 0}
+                      className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all duration-200 ${testCurrentIndex === 0
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-white border-2 border-gray-200 text-gray-600 hover:border-secondary hover:text-secondary'
+                        }`}
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={() => handleTestNavigation('next')}
+                      disabled={testCurrentIndex === testSession.questions.length - 1}
+                      className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all duration-200 ${testCurrentIndex === testSession.questions.length - 1
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-secondary text-white shadow-lg'
+                        }`}
+                    >
+                      Next question
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       <WorkingOutCanvas
         isVisible={showCanvas}
         onClose={() => setShowCanvas(false)}
-        question={currentQuestion}
+        question={workingOutQuestion}
       />
     </div>
   );

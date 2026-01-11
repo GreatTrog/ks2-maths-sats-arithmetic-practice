@@ -4,6 +4,7 @@ import { Question, QuestionType } from '../types';
 const gcd = (a: number, b: number): number => b ? gcd(b, a % b) : a;
 const randomInt = (min: number, max: number): number => Math.floor(Math.random() * (max - min + 1)) + min;
 const formatWithCommas = (n: number) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+const BLANK_BOX = '[blank]';
 
 // --- Fraction Helpers ---
 type SimpleFraction = { n: number, d: number };
@@ -32,8 +33,8 @@ const generateAddition = (): Question => {
     const num1 = randomInt(100, 9999);
     const num2 = randomInt(100, 9999);
     const text = Math.random() < 0.5
-        ? `${num1} + ${num2} =`
-        : `_ = ${num1} + ${num2}`;
+        ? `${formatWithCommas(num1)} + ${formatWithCommas(num2)} =`
+        : `${BLANK_BOX} = ${formatWithCommas(num1)} + ${formatWithCommas(num2)}`;
     return { type: QuestionType.Addition, text, answer: (num1 + num2).toString() };
 };
 
@@ -41,8 +42,8 @@ const generateSubtraction = (): Question => {
     const num1 = randomInt(1000, 9999);
     const num2 = randomInt(100, num1 - 10);
     const text = Math.random() < 0.5
-        ? `${num1} - ${num2} =`
-        : `_ = ${num1} - ${num2}`;
+        ? `${formatWithCommas(num1)} - ${formatWithCommas(num2)} =`
+        : `${BLANK_BOX} = ${formatWithCommas(num1)} - ${formatWithCommas(num2)}`;
     return { type: QuestionType.Subtraction, text, answer: (num1 - num2).toString() };
 };
 
@@ -56,8 +57,8 @@ const generateMultiplication = (): Question => {
     const num1 = randomInt(10, 99);
     const num2 = randomInt(2, 9);
     const text = Math.random() < 0.5
-        ? `${num1} × ${num2} =`
-        : `_ = ${num1} × ${num2}`;
+        ? `${formatWithCommas(num1)} × ${formatWithCommas(num2)} =`
+        : `${BLANK_BOX} = ${formatWithCommas(num1)} × ${formatWithCommas(num2)}`;
     return { type: QuestionType.Multiplication, text, answer: (num1 * num2).toString() };
 };
 
@@ -69,7 +70,7 @@ const generateMultiplication3Numbers = (): Question => {
         [nums[i], nums[j]] = [nums[j], nums[i]];
     }
     const answer = nums.reduce((a, b) => a * b, 1);
-    return { type: QuestionType.Multiplication3Numbers, text: `${nums[0]} × ${nums[1]} × ${nums[2]} =`, answer: answer.toString() };
+    return { type: QuestionType.Multiplication3Numbers, text: `${formatWithCommas(nums[0])} × ${formatWithCommas(nums[1])} × ${formatWithCommas(nums[2])} =`, answer: answer.toString() };
 };
 
 const generateDivision = (): Question => {
@@ -77,8 +78,8 @@ const generateDivision = (): Question => {
     const quotient = randomInt(10, 99);
     const dividend = divisor * quotient;
     const text = Math.random() < 0.5
-        ? `${dividend} ÷ ${divisor} =`
-        : `_ = ${dividend} ÷ ${divisor}`;
+        ? `${formatWithCommas(dividend)} ÷ ${formatWithCommas(divisor)} =`
+        : `${BLANK_BOX} = ${formatWithCommas(dividend)} ÷ ${formatWithCommas(divisor)}`;
     return { type: QuestionType.Division, text, answer: quotient.toString() };
 };
 
@@ -88,7 +89,7 @@ const generateDivisionWithKnownFacts = (): Question => {
     const powerOf10 = 10 ** randomInt(1, 3);
     const dividend = multiple * powerOf10;
     const answer = (dividend / fact).toString();
-    return { type: QuestionType.DivisionWithKnownFacts, text: `${dividend} ÷ ${fact} =`, answer };
+    return { type: QuestionType.DivisionWithKnownFacts, text: `${formatWithCommas(dividend)} ÷ ${formatWithCommas(fact)} =`, answer };
 };
 
 
@@ -97,7 +98,7 @@ const generateLongMultiplication = (): Question => {
     const num2 = randomInt(10, 99);
     return {
         type: QuestionType.LongMultiplication,
-        text: `${num1} × ${num2} =`,
+        text: `${formatWithCommas(num1)} × ${formatWithCommas(num2)} =`,
         operands: [num1.toString(), num2.toString()],
         operator: '×',
         answer: (num1 * num2).toString()
@@ -110,7 +111,7 @@ const generateLongDivision = (): Question => {
     const dividend = divisor * quotient;
     return {
         type: QuestionType.LongDivision,
-        text: `${divisor} │ ${dividend}`,
+        text: `${formatWithCommas(divisor)} ⟌ ${formatWithCommas(dividend)}`,
         answer: quotient.toString()
     }
 };
@@ -156,7 +157,10 @@ const generateFractionAdditionSimpleDenominators = (): Question => {
 
 const generateFractionAdditionMixedNumbers = (): Question => {
     const f1 = createMixedNumber();
-    const f2 = createMixedNumber();
+    let f2 = createMixedNumber();
+    while (f2.d === f1.d) {
+        f2 = createMixedNumber();
+    }
     const imp1 = toImproper(f1);
     const imp2 = toImproper(f2);
 
@@ -230,6 +234,9 @@ const generateFractionSubtractionSimpleDenominators = (): Question => {
 const generateFractionSubtractionMixedNumbers = (): Question => {
     let f1 = createMixedNumber();
     let f2 = createMixedNumber();
+    while (f2.d === f1.d) {
+        f2 = createMixedNumber();
+    }
     let imp1 = toImproper(f1);
     let imp2 = toImproper(f2);
 
@@ -257,8 +264,8 @@ const generateFractionSubtractionMixedNumbers = (): Question => {
 const generateFractionMultiplication = (): Question => {
     const den1 = randomInt(2, 8);
     const den2 = randomInt(2, 8);
-    const num1 = randomInt(1, den1);
-    const num2 = randomInt(1, den2);
+    const num1 = randomInt(1, den1 - 1);
+    const num2 = randomInt(1, den2 - 1);
 
     const resNum = num1 * num2;
     const resDen = den1 * den2;
@@ -416,11 +423,11 @@ const generatePercentages = (difficulty: number = 0): Question => {
         } while (percentage % 5 === 0);
     }
 
-    const num = randomInt(2, 20) * 10;
+    const num = randomInt(10, 999) * 10;
     const answerVal = (percentage / 100) * num;
     // Fix floating point precision (e.g. 26.4000000002)
     const answer = parseFloat(answerVal.toFixed(10));
-    return { type: QuestionType.Percentages, text: `${percentage}% of ${num} =`, answer: answer.toString() };
+    return { type: QuestionType.Percentages, text: `${percentage}% of ${formatWithCommas(num)} =`, answer: answer.toString() };
 };
 
 const generateBIDMAS = (): Question => {
@@ -566,7 +573,7 @@ const generateMultiplyByPowersOf10 = (): Question => {
     const num = parseFloat((Math.random() * 99 + 1).toFixed(randomInt(1, 2)));
     const answer = num * power;
     const sanitizedAnswer = parseFloat(answer.toFixed(10)).toString();
-    return { type: QuestionType.MultiplyBy10_100_1000, text: `${num} × ${power} =`, answer: sanitizedAnswer };
+    return { type: QuestionType.MultiplyBy10_100_1000, text: `${formatWithCommas(num)} × ${formatWithCommas(power)} =`, answer: sanitizedAnswer };
 };
 
 const generateDivideByPowersOf10 = (): Question => {
@@ -574,26 +581,36 @@ const generateDivideByPowersOf10 = (): Question => {
     const num = parseFloat((Math.random() * 99 + 1).toFixed(randomInt(1, 2)));
     const answer = num / power;
     const sanitizedAnswer = parseFloat(answer.toFixed(10)).toString();
-    return { type: QuestionType.DivideBy10_100_1000, text: `${num} ÷ ${power} =`, answer: sanitizedAnswer };
+    return { type: QuestionType.DivideBy10_100_1000, text: `${formatWithCommas(num)} ÷ ${formatWithCommas(power)} =`, answer: sanitizedAnswer };
 };
 
 const generatePlaceValue = (): Question => {
-    const num = randomInt(1000000, 9999999);
-    let strNum = num.toString();
+    const length = randomInt(3, 7);
+    const positions = new Set<number>();
+    positions.add(0);
+    while (positions.size < 3) {
+        positions.add(randomInt(1, length - 1));
+    }
+    const digits = Array.from({ length }, () => 0);
+    positions.forEach((pos) => {
+        const isLeading = pos === 0;
+        digits[pos] = randomInt(isLeading ? 1 : 1, 9);
+    });
+    const num = parseInt(digits.join(''), 10);
+
     const parts: number[] = [];
-    for (let i = 0; i < strNum.length; i++) {
-        if (strNum[i] !== '0') {
-            parts.push(parseInt(strNum[i]) * Math.pow(10, strNum.length - 1 - i));
+    for (let i = 0; i < digits.length; i++) {
+        if (digits[i] !== 0) {
+            parts.push(digits[i] * Math.pow(10, digits.length - 1 - i));
         }
     }
-    if (parts.length < 2) return generatePlaceValue();
 
     const answerIndex = randomInt(0, parts.length - 1);
     const answer = parts[answerIndex];
     const questionParts = [...parts.slice(0, answerIndex), ...parts.slice(answerIndex + 1)];
 
     // Shuffle question parts and add the blank
-    const displayParts = [...questionParts.map(formatWithCommas), '_'];
+    const displayParts = [...questionParts.map(formatWithCommas), BLANK_BOX];
     for (let i = displayParts.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [displayParts[i], displayParts[j]] = [displayParts[j], displayParts[i]];

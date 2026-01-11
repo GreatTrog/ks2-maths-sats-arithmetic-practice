@@ -69,3 +69,45 @@ export interface PracticeState {
   type: QuestionType;
   correctInARow: number;
 }
+
+export type TestQuestion = {
+  questionId: string;
+  slotNumber: number;
+  type: QuestionType;
+  prompt: string;
+  correctAnswer: string;
+  markValue: number;
+  constraintFlags: string[];
+  bidmasMetadata?: BidmasMetadata;
+};
+
+export type TestResponseEntry = {
+  rawInput: string;
+  normalizedInput: string;
+  submittedAt: string;
+};
+
+export type TestQuestionResponse = {
+  latest: TestResponseEntry | null;
+  history: TestResponseEntry[];
+};
+
+export type TestQuestionMark = {
+  questionId: string;
+  slotNumber: number;
+  marksAwarded: number;
+};
+
+export type TestSession = {
+  sessionId: string;
+  startedAt: string;
+  durationSeconds: number;
+  endsAt: string;
+  paperVersion: string;
+  modeVersion: string;
+  questions: TestQuestion[];
+  responses: Record<string, TestQuestionResponse>;
+  marks: TestQuestionMark[] | null;
+  totalMarksAwarded: number | null;
+  completedAt: string | null;
+};
