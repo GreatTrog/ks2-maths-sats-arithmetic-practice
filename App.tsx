@@ -673,6 +673,7 @@ const buildShortFormPaperHtml = (session: TestSession) => {
 
   return `
     <style>
+      .page-break { break-before: page; page-break-before: always; }
       @page { size: A4 portrait; margin: 12mm; }
       body { font-family: "Georgia", "Times New Roman", serif; color: #111; margin: 12px; }
       .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #111; padding-bottom: 6px; margin-bottom: 10px; }
@@ -708,6 +709,8 @@ const buildShortFormPaperHtml = (session: TestSession) => {
         ${rows}
       </tbody>
     </table>
+    <div class="page-break"></div>
+    ${buildAnswerSheetHtml(session)}
   `;
 };
 
