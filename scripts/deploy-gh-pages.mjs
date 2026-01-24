@@ -7,7 +7,7 @@ const ghPagesBin = path.resolve('node_modules', 'gh-pages', 'bin', 'gh-pages');
 
 const result = spawnSync(process.execPath, [ghPagesBin, '-d', 'dist'], {
   stdio: 'inherit',
-  env: {...process.env, CACHE_DIR: cacheDir},
+  env: { ...process.env, CACHE_DIR: cacheDir },
 });
 
 if (result.error) {
