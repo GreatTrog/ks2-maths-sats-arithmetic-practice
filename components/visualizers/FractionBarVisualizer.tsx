@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Question, QuestionType } from '../../types';
+import FractionComponent from '../Fraction';
 
 interface FractionBarVisualizerProps {
     question: Question;
@@ -16,8 +17,9 @@ const lcm = (a: number, b: number): number => (a * b) / gcd(a, b);
 
 // Constants for layout
 const BAR_HEIGHT = 64; // h-16 = 64px
-const GAP = 48; // Space between bars
-const BAR_1_Y = 0;
+const GAP = 64; // Further increased space between bars
+const TOP_OFFSET = 80; // Significantly increased space at top for stacked header
+const BAR_1_Y = TOP_OFFSET;
 
 const FractionBarVisualizer: React.FC<FractionBarVisualizerProps> = ({ question, stepIndex }) => {
 
@@ -78,9 +80,9 @@ const FractionBarVisualizer: React.FC<FractionBarVisualizerProps> = ({ question,
     // stepIndex 2: "Add/Sub" -> Animate block movement (Index 2 matches `step >= 2` logic)
     // Works perfectly!
 
-    const BAR_2_Y = BAR_HEIGHT + GAP;
-    const MATH_Y = mode === 'subtract' ? BAR_HEIGHT + 64 : BAR_2_Y + BAR_HEIGHT + 80;
-    const CONTAINER_HEIGHT = MATH_Y + 100; // Added some padding
+    const BAR_2_Y = BAR_1_Y + BAR_HEIGHT + GAP;
+    const MATH_Y = mode === 'subtract' ? BAR_1_Y + BAR_HEIGHT + 80 : BAR_2_Y + BAR_HEIGHT + 96;
+    const CONTAINER_HEIGHT = MATH_Y + 120; // Increased padding
 
     const blocks = useMemo(() => {
         // Convert original fractions to common denominator counts
@@ -175,7 +177,7 @@ const FractionBarVisualizer: React.FC<FractionBarVisualizerProps> = ({ question,
                     style={{
                         left: `${(i / denom) * 100}%`,
                         height: `${BAR_HEIGHT}px`,
-                        top: `${yPos}px`,
+                        top: `0px`, // Relative to bar now
                     }}
                 />
             );
@@ -192,7 +194,7 @@ const FractionBarVisualizer: React.FC<FractionBarVisualizerProps> = ({ question,
                     className="absolute border-r border-dashed border-slate-400/70 pointer-events-none z-10 transition-opacity duration-500"
                     style={{
                         left: `${(i / commonDenominator) * 100}%`,
-                        top: `${yPos}px`,
+                        top: `0px`, // Relative to bar now
                         height: `${BAR_HEIGHT}px`,
                         opacity: stepIndex >= 1 ? 1 : 0,
                     }}
@@ -227,20 +229,12 @@ const FractionBarVisualizer: React.FC<FractionBarVisualizerProps> = ({ question,
                     </div>
 
                     {/* Original Fraction */}
-                    <div className="flex flex-col items-center">
-                        <span>{fraction.n}</span>
-                        <div className="w-8 h-0.5 bg-current my-1"></div>
-                        <span>{fraction.d}</span>
-                    </div>
+                    <FractionComponent numerator={fraction.n} denominator={fraction.d} size="xl" />
 
                     <span>=</span>
 
                     {/* New Fraction */}
-                    <div className="flex flex-col items-center">
-                        <span>{newN}</span>
-                        <div className="w-10 h-0.5 bg-current my-1"></div>
-                        <span>{newD}</span>
-                    </div>
+                    <FractionComponent numerator={newN} denominator={newD} size="xl" />
 
                     {/* Bottom Arrow (Denominator) +45 deg */}
                     <div className="absolute -bottom-8 left-0 w-full flex justify-center">
@@ -268,9 +262,11 @@ const FractionBarVisualizer: React.FC<FractionBarVisualizerProps> = ({ question,
             <div className="relative w-full max-w-2xl mx-auto" style={{ height: `${CONTAINER_HEIGHT}px` }}>
 
                 {/* Header for subtraction (or generally just useful) */}
-                <div className="absolute w-full top-0 flex justify-center -mt-8">
-                    <div className="text-xl font-bold text-slate-500 font-mono">
-                        {fraction1.n}/{fraction1.d} {mode === 'add' ? '+' : '−'} {fraction2.n}/{fraction2.d}
+                <div className="absolute w-full top-0 flex justify-center mt-4">
+                    <div className="text-xl font-bold text-slate-500 font-mono flex items-center gap-3">
+                        <FractionComponent numerator={fraction1.n} denominator={fraction1.d} />
+                        <span className="text-2xl">{mode === 'add' ? '+' : '−'}</span>
+                        <FractionComponent numerator={fraction2.n} denominator={fraction2.d} />
                     </div>
                 </div>
 
@@ -279,8 +275,8 @@ const FractionBarVisualizer: React.FC<FractionBarVisualizerProps> = ({ question,
                     className="absolute w-full border-2 border-slate-800 bg-slate-100/50 overflow-hidden box-content -ml-[2px] rounded-sm"
                     style={{ top: BAR_1_Y, height: BAR_HEIGHT }}
                 >
-                    {renderLCMGrid(0)}
-                    {renderOriginalGrid(fraction1.d, 0)}
+                    {renderLCMGrid(BAR_1_Y)}
+                    {renderOriginalGrid(fraction1.d, BAR_1_Y)}
                 </div>
 
                 {/* --- BAR 2 (Add Only) --- */}
@@ -289,8 +285,8 @@ const FractionBarVisualizer: React.FC<FractionBarVisualizerProps> = ({ question,
                         className="absolute w-full border-2 border-slate-800 bg-slate-100/50 overflow-hidden box-content -ml-[2px] rounded-sm"
                         style={{ top: BAR_2_Y, height: BAR_HEIGHT }}
                     >
-                        {renderLCMGrid(0)}
-                        {renderOriginalGrid(fraction2.d, 0)}
+                        {renderLCMGrid(BAR_2_Y)}
+                        {renderOriginalGrid(fraction2.d, BAR_2_Y)}
                     </div>
                 )}
 
@@ -332,7 +328,7 @@ const FractionBarVisualizer: React.FC<FractionBarVisualizerProps> = ({ question,
                     className="absolute -left-12 sm:-left-16 flex items-center justify-end w-12 sm:w-16 font-bold text-slate-700 text-lg sm:text-xl pr-4"
                     style={{ top: BAR_1_Y, height: BAR_HEIGHT }}
                 >
-                    {fraction1.n}/{fraction1.d}
+                    <FractionComponent numerator={fraction1.n} denominator={fraction1.d} />
                 </div>
 
                 {mode === 'add' && (
@@ -340,7 +336,7 @@ const FractionBarVisualizer: React.FC<FractionBarVisualizerProps> = ({ question,
                         className="absolute -left-12 sm:-left-16 flex items-center justify-end w-12 sm:w-16 font-bold text-slate-700 text-lg sm:text-xl pr-4"
                         style={{ top: BAR_2_Y, height: BAR_HEIGHT }}
                     >
-                        {fraction2.n}/{fraction2.d}
+                        <FractionComponent numerator={fraction2.n} denominator={fraction2.d} />
                     </div>
                 )}
 
@@ -365,28 +361,22 @@ const FractionBarVisualizer: React.FC<FractionBarVisualizerProps> = ({ question,
                 >
                     <div className="bg-white/80 backdrop-blur-md px-6 py-4 rounded-xl shadow-lg border border-slate-200 text-slate-800 text-2xl font-bold flex items-center gap-6">
                         {/* Fraction 1 (Equivalent) */}
-                        <div className="flex flex-col items-center text-indigo-600">
-                            <span>{eqN1}</span>
-                            <div className="w-full h-0.5 bg-indigo-600 my-1"></div>
-                            <span>{commonDenominator}</span>
+                        <div className="text-indigo-600">
+                            <FractionComponent numerator={eqN1} denominator={commonDenominator} size="2xl" />
                         </div>
 
                         <span className="text-slate-400">{mode === 'add' ? '+' : '−'}</span>
 
                         {/* Fraction 2 (Equivalent) */}
-                        <div className="flex flex-col items-center text-orange-600">
-                            <span>{eqN2}</span>
-                            <div className="w-full h-0.5 bg-orange-600 my-1"></div>
-                            <span>{commonDenominator}</span>
+                        <div className="text-orange-600">
+                            <FractionComponent numerator={eqN2} denominator={commonDenominator} size="2xl" />
                         </div>
 
                         <span className="text-slate-400">=</span>
 
                         {/* Result */}
-                        <div className="flex flex-col items-center text-slate-900 bg-green-50 px-3 py-1 rounded-lg border border-green-100">
-                            <span>{resultN}</span>
-                            <div className="w-full h-0.5 bg-slate-900 my-1"></div>
-                            <span>{commonDenominator}</span>
+                        <div className="text-slate-900 bg-green-50 px-3 py-1 rounded-lg border border-green-100">
+                            <FractionComponent numerator={resultN} denominator={commonDenominator} size="2xl" />
                         </div>
                     </div>
                 </div>

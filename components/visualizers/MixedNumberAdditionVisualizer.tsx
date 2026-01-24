@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Question } from '../../types';
+import FractionComponent from '../Fraction';
 
 interface MixedNumberAdditionVisualizerProps {
     question: Question;
@@ -119,8 +120,8 @@ const MixedNumberAdditionVisualizer: React.FC<MixedNumberAdditionVisualizerProps
     // 5: "Simplify" (optional)
 
     return (
-        <div className="flex flex-col items-center p-6 bg-white rounded-3xl shadow-inner border-2 border-gray-100 min-w-[500px] w-full overflow-x-auto">
-            <div className="text-gray-500 font-bold mb-4 font-mono text-lg">{question.text}</div>
+        <div className="flex flex-col items-center p-8 bg-white rounded-3xl shadow-inner border-2 border-gray-100 min-w-[500px] w-full overflow-x-auto">
+            <div className="text-gray-500 font-bold mb-8 font-mono text-lg">{renderTextWithFractions(question.text)}</div>
 
             {/* Section 1: Wholes */}
             <div className="w-full flex flex-col items-center gap-2 mb-8 p-4 bg-gray-50 rounded-xl border border-gray-200">
@@ -165,12 +166,16 @@ const MixedNumberAdditionVisualizer: React.FC<MixedNumberAdditionVisualizerProps
                     <div className="flex justify-around w-full items-center">
                         <div className="flex flex-col items-center gap-1">
                             {renderFractionBar(m1.n, m1.d, commonDenominator, 'bg-blue-400')}
-                            <span className="font-mono text-sm text-blue-600 font-bold">{m1.n}/{m1.d}</span>
+                            <span className="font-mono text-sm text-blue-600 font-bold flex flex-col items-center">
+                                <FractionComponent numerator={m1.n} denominator={m1.d} />
+                            </span>
                         </div>
                         <div className="text-2xl font-bold text-gray-400">+</div>
                         <div className="flex flex-col items-center gap-1">
                             {renderFractionBar(m2.n, m2.d, commonDenominator, 'bg-orange-400')}
-                            <span className="font-mono text-sm text-orange-600 font-bold">{m2.n}/{m2.d}</span>
+                            <span className="font-mono text-sm text-orange-600 font-bold flex flex-col items-center">
+                                <FractionComponent numerator={m2.n} denominator={m2.d} />
+                            </span>
                         </div>
                     </div>
 
@@ -199,12 +204,14 @@ const MixedNumberAdditionVisualizer: React.FC<MixedNumberAdditionVisualizerProps
                                     {(remN > 0 || extraWholes === 0) && (
                                         <div className="flex flex-col items-center">
                                             {renderFractionBar(remN, commonDenominator, commonDenominator, 'bg-indigo-500')}
-                                            <span className="font-mono text-sm text-indigo-700 font-bold">{remN}/{commonDenominator}</span>
+                                            <span className="font-mono text-sm text-indigo-700 font-bold flex flex-col items-center">
+                                                <FractionComponent numerator={remN} denominator={commonDenominator} />
+                                            </span>
                                         </div>
                                     )}
                                 </div>
-                                <div className="text-sm text-blue-600">
-                                    {fractionSumInvalid.n}/{commonDenominator}
+                                <div className="text-sm text-blue-600 flex flex-col items-center">
+                                    <FractionComponent numerator={fractionSumInvalid.n} denominator={commonDenominator} />
                                 </div>
                             </div>
                         </>
@@ -220,6 +227,41 @@ const MixedNumberAdditionVisualizer: React.FC<MixedNumberAdditionVisualizerProps
 
         </div>
     );
+};
+
+const renderTextWithFractions = (text: string) => {
+    const regex = /(\d+\s+\d+\/\d+)|(\d+\/\d+)/g;
+    const parts = text.split(regex);
+
+    return parts.map((part, i) => {
+        if (!part) return null;
+        if (part.match(regex)) {
+            const mixedMatch = part.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+            if (mixedMatch) {
+                return (
+                    <FractionComponent
+                        key={i}
+                        whole={mixedMatch[1]}
+                        numerator={mixedMatch[2]}
+                        denominator={mixedMatch[3]}
+                        size="inherit"
+                    />
+                );
+            }
+            const fractionMatch = part.match(/^(\d+)\/(\d+)$/);
+            if (fractionMatch) {
+                return (
+                    <FractionComponent
+                        key={i}
+                        numerator={fractionMatch[1]}
+                        denominator={fractionMatch[2]}
+                        size="inherit"
+                    />
+                );
+            }
+        }
+        return <span key={i}>{part}</span>;
+    });
 };
 
 export default MixedNumberAdditionVisualizer;

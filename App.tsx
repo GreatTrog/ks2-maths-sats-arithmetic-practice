@@ -30,6 +30,7 @@ import FractionBarVisualizer from './components/visualizers/FractionBarVisualize
 import PercentagesOfAmountsVisualizer from './components/visualizers/PercentagesOfAmountsVisualizer';
 import BIDMASVisualizer from './components/visualizers/BIDMASVisualizer';
 import WorkingOutCanvas from './components/WorkingOutCanvas';
+import Fraction from './components/Fraction';
 
 // --- Icons ---
 const CheckIcon = () => (
@@ -68,14 +69,36 @@ const PracticeTracker: React.FC<{ count: number }> = ({ count }) => (
   </div>
 );
 
+const renderTextWithFractions = (text: string) => {
+  // Regex for:
+  // 1. Mixed number: "1 1/2"
+  // 2. Simple fraction: "1/2"
+  const regex = /(\d+\s+\d+\/\d+)|(\d+\/\d+)/g;
+  const parts = text.split(regex);
+
+  return parts.map((part, i) => {
+    if (!part) return null;
+    if (part.match(regex)) {
+      const mixedMatch = part.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+      if (mixedMatch) {
+        return <Fraction key={i} whole={mixedMatch[1]} numerator={mixedMatch[2]} denominator={mixedMatch[3]} />;
+      }
+      const fractionMatch = part.match(/^(\d+)\/(\d+)$/);
+      if (fractionMatch) {
+        return <Fraction key={i} numerator={fractionMatch[1]} denominator={fractionMatch[2]} />;
+      }
+    }
+    return <span key={i}>{part}</span>;
+  });
+};
+
 const renderPromptParts = (text: string) => {
   const parts = text.split(BLANK_TOKEN);
-  if (parts.length === 1) return text;
   return (
     <>
       {parts.map((part, index) => (
         <React.Fragment key={`${part}-${index}`}>
-          {part}
+          {renderTextWithFractions(part)}
           {index < parts.length - 1 && (
             <span className="inline-block align-middle border-4 border-blue-600 w-24 h-12 mx-2 rounded-sm" />
           )}
@@ -117,7 +140,11 @@ const FormattedText: React.FC<{ text: string }> = ({ text }) => {
     <span>
       {parts.map((part, i) => {
         if (part.startsWith('**') && part.endsWith('**')) {
-          return <strong key={i} className="font-bold text-primary">{part.slice(2, -2)}</strong>;
+          return (
+            <strong key={i} className="font-bold text-primary">
+              {renderTextWithFractions(part.slice(2, -2))}
+            </strong>
+          );
         }
         // Now handle italics within non-bold parts
         const italicParts = part.split(/(\*.*?\*)/g);
@@ -125,9 +152,13 @@ const FormattedText: React.FC<{ text: string }> = ({ text }) => {
           <span key={i}>
             {italicParts.map((iPart, j) => {
               if (iPart.startsWith('*') && iPart.endsWith('*') && iPart.length > 2) {
-                return <em key={j} className="italic">{iPart.slice(1, -1)}</em>;
+                return (
+                  <em key={j} className="italic">
+                    {renderTextWithFractions(iPart.slice(1, -1))}
+                  </em>
+                );
               }
-              return <span key={j}>{iPart}</span>;
+              return <span key={j}>{renderTextWithFractions(iPart)}</span>;
             })}
           </span>
         );
@@ -527,8 +558,8 @@ const computeTestMarks = (session: TestSession): { marks: TestQuestionMark[]; to
       if (expectedRemainder) {
         const remainderMatches = Boolean(
           givenRemainder &&
-            expectedRemainder.quotient === givenRemainder.quotient &&
-            expectedRemainder.remainder === givenRemainder.remainder,
+          expectedRemainder.quotient === givenRemainder.quotient &&
+          expectedRemainder.remainder === givenRemainder.remainder,
         );
 
         const promptDivision = parseDivisionPrompt(question.prompt);
@@ -562,7 +593,31 @@ const computeTestMarks = (session: TestSession): { marks: TestQuestionMark[]; to
   return { marks, total };
 };
 
-const formatPromptHtml = (text: string) => escapeHtml(text).split(BLANK_TOKEN).join('<span class="blank-box"></span>');
+const fractionToHtml = (text: string) => {
+  const regex = /(\d+\s+\d+\/\d+)|(\d+\/\d+)/g;
+  return text.replace(regex, (match) => {
+    const mixedMatch = match.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+    if (mixedMatch) {
+      return `<span class="frac-mixed">
+          <span class="frac-whole">${mixedMatch[1]}</span>
+          <span class="frac-stacked">
+              <span class="frac-num">${mixedMatch[2]}</span>
+              <span class="frac-den">${mixedMatch[3]}</span>
+          </span>
+      </span>`;
+    }
+    const fractionMatch = match.match(/^(\d+)\/(\d+)$/);
+    if (fractionMatch) {
+      return `<span class="frac-stacked">
+          <span class="frac-num">${fractionMatch[1]}</span>
+          <span class="frac-den">${fractionMatch[2]}</span>
+      </span>`;
+    }
+    return match;
+  });
+};
+
+const formatPromptHtml = (text: string) => fractionToHtml(escapeHtml(text)).split(BLANK_TOKEN).join('<span class="blank-box"></span>');
 
 const buildTestPaperHtml = (session: TestSession) => {
   const questionsHtml = session.questions.map((question) => {
@@ -607,6 +662,11 @@ const buildTestPaperHtml = (session: TestSession) => {
         .question:nth-of-type(4n) { break-after: page; page-break-after: always; }
       }
       .q-mark { background: #dfe6f5; border-left: 1px solid #444; display: flex; align-items: flex-end; justify-content: center; font-size: 12px; font-weight: 700; padding-bottom: 10px; }
+      .frac-mixed { display: inline-flex; align-items: center; vertical-align: middle; }
+      .frac-whole { font-weight: 700; margin-right: 4px; font-size: 1.1em; }
+      .frac-stacked { display: inline-flex; flex-direction: column; text-align: center; line-height: 1; vertical-align: middle; margin: 0 2px; }
+      .frac-num { border-bottom: 2px solid currentColor; padding: 0 2px 2px 2px; font-weight: 700; }
+      .frac-den { padding: 2px 2px 0 2px; font-weight: 700; }
     </style>
     <div class="header">
       <div>
@@ -623,7 +683,7 @@ const buildAnswerSheetHtml = (session: TestSession) => {
   const rows = session.questions.map((question) => `
     <tr>
       <td>${question.slotNumber}</td>
-      <td>${escapeHtml(question.correctAnswer)}</td>
+      <td>${fractionToHtml(escapeHtml(question.correctAnswer))}</td>
       <td>${question.markValue}</td>
     </tr>
   `).join('');
@@ -687,6 +747,11 @@ const buildShortFormPaperHtml = (session: TestSession) => {
       .q-box { width: 90px; text-align: center; }
       .q-mark { width: 40px; text-align: center; font-weight: 700; }
       .short-box { width: 70px; height: 28px; border-width: 2px; }
+      .frac-mixed { display: inline-flex; align-items: center; vertical-align: middle; }
+      .frac-whole { font-weight: 700; margin-right: 3px; }
+      .frac-stacked { display: inline-flex; flex-direction: column; text-align: center; line-height: 1; vertical-align: middle; }
+      .frac-num { border-bottom: 1.5px solid currentColor; padding: 0 1px 1px 1px; font-weight: 600; }
+      .frac-den { padding: 1px 1px 0 1px; font-weight: 600; }
       @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     </style>
     <div class="header">
@@ -725,8 +790,8 @@ const buildSummaryHtml = (session: TestSession) => {
         <td>${question.slotNumber}</td>
         <td>${formatPromptHtml(question.prompt)}</td>
         <td>${question.markValue}</td>
-        <td>${escapeHtml(pupilAnswer)}</td>
-        <td>${escapeHtml(question.correctAnswer)}</td>
+        <td>${fractionToHtml(escapeHtml(pupilAnswer))}</td>
+        <td>${fractionToHtml(escapeHtml(question.correctAnswer))}</td>
         <td>${awarded}</td>
       </tr>
     `;
@@ -741,6 +806,11 @@ const buildSummaryHtml = (session: TestSession) => {
       table { width: 100%; border-collapse: collapse; font-size: 12px; }
       th, td { border: 1px solid #333; padding: 6px; text-align: left; vertical-align: top; }
       th { background: #f2f2f2; }
+      .frac-mixed { display: inline-flex; align-items: center; vertical-align: middle; }
+      .frac-whole { font-weight: 700; margin-right: 3px; }
+      .frac-stacked { display: inline-flex; flex-direction: column; text-align: center; line-height: 1.1; vertical-align: middle; }
+      .frac-num { border-bottom: 1.5px solid currentColor; padding: 0 1px 1px 1px; font-weight: 600; }
+      .frac-den { padding: 1px 1px 0 1px; font-weight: 600; }
     </style>
     <div class="header">
       <div>
@@ -1368,141 +1438,141 @@ export default function App() {
       {mode === 'practice' && (
         <>
           <div className="w-full max-w-xs mx-auto mb-8">
-        <label htmlFor="topic-select" className="block text-lg font-bold text-gray-700 mb-2 text-center">
-          Choose a topic to practice:
-        </label>
-        <div className="relative">
-          <select
-            id="topic-select"
-            value={selectedTopic}
-            onChange={handleTopicChange}
-            className="block w-full pl-4 pr-10 py-3 text-lg border-2 border-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/20 focus:border-primary rounded-2xl shadow-sm bg-white appearance-none cursor-pointer transition-all hover:border-primary"
-          >
-            <option value="All">🎲 All Topics (Random)</option>
-            {questionTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-primary">
-            <svg className="h-6 w-6 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
-          </div>
-        </div>
-      </div>
-
-
-      {practiceState && (
-        <div className="w-full max-w-2xl mx-auto bg-white/80 backdrop-blur p-6 rounded-3xl shadow-xl mb-8 border-4 border-blue-200 animate-fade-in">
-          <h3 className="text-xl font-bold text-primary text-center mb-4">Practice Zone: {practiceState.type}</h3>
-          <PracticeTracker count={practiceState.correctInARow} />
-          <p className="text-center text-base text-gray-600 mt-3 font-medium">Get 5 stars to unlock a new topic! ⭐⭐⭐⭐⭐</p>
-          <div className="mt-6 text-center">
-            <p className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">Timer per question</p>
-            <div className="flex flex-wrap justify-center gap-3">
-              {practiceTimerOptions.map((option) => (
-                <button
-                  key={`timer-${option.seconds}`}
-                  onClick={() => {
-                    setPracticeTimerSeconds(option.seconds);
-                    setSecondsRemaining(option.seconds);
-                  }}
-                  className={`px-4 py-2 rounded-full text-sm font-bold transition-all duration-200 transform hover:scale-105 ${practiceTimerSeconds === option.seconds
-                    ? 'bg-primary text-white shadow-lg ring-2 ring-primary ring-offset-2'
-                    : 'bg-white text-gray-600 border-2 border-gray-200 hover:border-primary hover:text-primary'
-                    }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            {practiceTimerSeconds > 0 && currentQuestion && (
-              <div className={`mt-4 text-3xl font-black transition-colors duration-300 ${secondsRemaining <= 5 ? 'text-red-500 animate-pulse' : 'text-primary'}`}>
-                ⏱️ {formatCountdown(secondsRemaining)}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {currentQuestion && !explanation && (
-        <div className="w-full max-w-2xl mx-auto bg-white p-8 md:p-10 rounded-3xl shadow-2xl border-b-8 border-gray-200 transition-all duration-300">
-          <div className="text-center mb-8">
-            <span className="inline-block bg-blue-100 text-blue-800 text-sm font-bold px-4 py-1.5 rounded-full uppercase tracking-wide">{currentQuestion.type}</span>
-          </div>
-
-          <QuestionDisplay question={currentQuestion} />
-
-          <div className="mt-10">
+            <label htmlFor="topic-select" className="block text-lg font-bold text-gray-700 mb-2 text-center">
+              Choose a topic to practice:
+            </label>
             <div className="relative">
-              <input
-                ref={inputRef}
-                type="text"
-                value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && isAnswering && handleCheckAnswer()}
-                placeholder="?"
-                className={`w-full p-5 text-4xl font-bold border-4 rounded-2xl text-center transition-all duration-300 focus:ring-4 outline-none bg-gray-50 text-gray-800 placeholder:text-gray-300
+              <select
+                id="topic-select"
+                value={selectedTopic}
+                onChange={handleTopicChange}
+                className="block w-full pl-4 pr-10 py-3 text-lg border-2 border-primary/30 focus:outline-none focus:ring-4 focus:ring-primary/20 focus:border-primary rounded-2xl shadow-sm bg-white appearance-none cursor-pointer transition-all hover:border-primary"
+              >
+                <option value="All">🎲 All Topics (Random)</option>
+                {questionTypes.map(type => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-primary">
+                <svg className="h-6 w-6 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+              </div>
+            </div>
+          </div>
+
+
+          {practiceState && (
+            <div className="w-full max-w-2xl mx-auto bg-white/80 backdrop-blur p-6 rounded-3xl shadow-xl mb-8 border-4 border-blue-200 animate-fade-in">
+              <h3 className="text-xl font-bold text-primary text-center mb-4">Practice Zone: {practiceState.type}</h3>
+              <PracticeTracker count={practiceState.correctInARow} />
+              <p className="text-center text-base text-gray-600 mt-3 font-medium">Get 5 stars to unlock a new topic! ⭐⭐⭐⭐⭐</p>
+              <div className="mt-6 text-center">
+                <p className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">Timer per question</p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  {practiceTimerOptions.map((option) => (
+                    <button
+                      key={`timer-${option.seconds}`}
+                      onClick={() => {
+                        setPracticeTimerSeconds(option.seconds);
+                        setSecondsRemaining(option.seconds);
+                      }}
+                      className={`px-4 py-2 rounded-full text-sm font-bold transition-all duration-200 transform hover:scale-105 ${practiceTimerSeconds === option.seconds
+                        ? 'bg-primary text-white shadow-lg ring-2 ring-primary ring-offset-2'
+                        : 'bg-white text-gray-600 border-2 border-gray-200 hover:border-primary hover:text-primary'
+                        }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                {practiceTimerSeconds > 0 && currentQuestion && (
+                  <div className={`mt-4 text-3xl font-black transition-colors duration-300 ${secondsRemaining <= 5 ? 'text-red-500 animate-pulse' : 'text-primary'}`}>
+                    ⏱️ {formatCountdown(secondsRemaining)}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {currentQuestion && !explanation && (
+            <div className="w-full max-w-2xl mx-auto bg-white p-8 md:p-10 rounded-3xl shadow-2xl border-b-8 border-gray-200 transition-all duration-300">
+              <div className="text-center mb-8">
+                <span className="inline-block bg-blue-100 text-blue-800 text-sm font-bold px-4 py-1.5 rounded-full uppercase tracking-wide">{currentQuestion.type}</span>
+              </div>
+
+              <QuestionDisplay question={currentQuestion} />
+
+              <div className="mt-10">
+                <div className="relative">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={userAnswer}
+                    onChange={(e) => setUserAnswer(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && isAnswering && handleCheckAnswer()}
+                    placeholder="?"
+                    className={`w-full p-5 text-4xl font-bold border-4 rounded-2xl text-center transition-all duration-300 focus:ring-4 outline-none bg-gray-50 text-gray-800 placeholder:text-gray-300
                     ${feedback === 'hidden' ? 'border-gray-200 focus:border-primary focus:ring-primary/20' : ''}
                     ${feedback === 'correct' ? 'border-green-400 bg-green-50 focus:ring-green-200' : ''}
                     ${feedback === 'incorrect' ? 'border-red-400 bg-red-50 focus:ring-red-200' : ''}
                     ${feedback === 'timeout' ? 'border-orange-400 bg-orange-50 focus:ring-orange-200' : ''}`}
-                disabled={!isAnswering}
-                autoFocus
-              />
+                    disabled={!isAnswering}
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => setShowCanvas(true)}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-primary transition-colors p-2"
+                    title="Show Working Out"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-6 min-h-[3rem] flex items-center justify-center">
+                {feedback === 'correct' && (
+                  <div className="flex items-center text-green-500 font-black text-xl animate-bounce">
+                    <CheckIcon />
+                    <span className="ml-2">Awesome! Correct! 🎉</span>
+                    <button onClick={() => speakText('Correct! Well done!')} className="ml-2 text-gray-400 hover:text-green-600 transition-colors" aria-label="Read feedback aloud">
+                      <SpeakerIcon />
+                    </button>
+                  </div>
+                )}
+                {feedback === 'incorrect' && (
+                  <div className="flex items-center text-red-500 font-black text-xl animate-shake">
+                    <CrossIcon />
+                    <span className="ml-2">Oops! Not quite. 🤔</span>
+                    <button onClick={() => speakText("Not quite, let's review.")} className="ml-2 text-gray-400 hover:text-red-600 transition-colors" aria-label="Read feedback aloud">
+                      <SpeakerIcon />
+                    </button>
+                  </div>
+                )}
+                {feedback === 'timeout' && (
+                  <div className="flex items-center text-orange-500 font-black text-xl">
+                    <span className="text-3xl mr-2">⏰</span>
+                    <span className="ml-2">Time's up! Try again!</span>
+                    <button onClick={() => speakText("Time's up! Keep calm and try again.")} className="ml-2 text-gray-400 hover:text-orange-600 transition-colors" aria-label="Read timeout feedback aloud">
+                      <SpeakerIcon />
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <button
-                onClick={() => setShowCanvas(true)}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-primary transition-colors p-2"
-                title="Show Working Out"
+                onClick={handleCheckAnswer}
+                disabled={!isAnswering || userAnswer.trim() === ''}
+                className="mt-8 w-full bg-secondary hover:bg-amber-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-black py-4 px-6 rounded-2xl shadow-[0_4px_0_0_rgba(0,0,0,0.1)] hover:shadow-[0_2px_0_0_rgba(0,0,0,0.1)] hover:translate-y-[2px] transition-all duration-200 text-2xl uppercase tracking-wider"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
+                Check Answer ✨
               </button>
             </div>
-          </div>
+          )}
 
-          <div className="mt-6 min-h-[3rem] flex items-center justify-center">
-            {feedback === 'correct' && (
-              <div className="flex items-center text-green-500 font-black text-xl animate-bounce">
-                <CheckIcon />
-                <span className="ml-2">Awesome! Correct! 🎉</span>
-                <button onClick={() => speakText('Correct! Well done!')} className="ml-2 text-gray-400 hover:text-green-600 transition-colors" aria-label="Read feedback aloud">
-                  <SpeakerIcon />
-                </button>
-              </div>
-            )}
-            {feedback === 'incorrect' && (
-              <div className="flex items-center text-red-500 font-black text-xl animate-shake">
-                <CrossIcon />
-                <span className="ml-2">Oops! Not quite. 🤔</span>
-                <button onClick={() => speakText("Not quite, let's review.")} className="ml-2 text-gray-400 hover:text-red-600 transition-colors" aria-label="Read feedback aloud">
-                  <SpeakerIcon />
-                </button>
-              </div>
-            )}
-            {feedback === 'timeout' && (
-              <div className="flex items-center text-orange-500 font-black text-xl">
-                <span className="text-3xl mr-2">⏰</span>
-                <span className="ml-2">Time's up! Try again!</span>
-                <button onClick={() => speakText("Time's up! Keep calm and try again.")} className="ml-2 text-gray-400 hover:text-orange-600 transition-colors" aria-label="Read timeout feedback aloud">
-                  <SpeakerIcon />
-                </button>
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={handleCheckAnswer}
-            disabled={!isAnswering || userAnswer.trim() === ''}
-            className="mt-8 w-full bg-secondary hover:bg-amber-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-black py-4 px-6 rounded-2xl shadow-[0_4px_0_0_rgba(0,0,0,0.1)] hover:shadow-[0_2px_0_0_rgba(0,0,0,0.1)] hover:translate-y-[2px] transition-all duration-200 text-2xl uppercase tracking-wider"
-          >
-            Check Answer ✨
-          </button>
-        </div>
-      )}
-
-      {explanation && currentQuestion && (
-        <StepByStepGuidancePanel steps={explanation} onContinue={startPracticeQuestion} speakText={speakText} question={currentQuestion} />
-      )}
+          {explanation && currentQuestion && (
+            <StepByStepGuidancePanel steps={explanation} onContinue={startPracticeQuestion} speakText={speakText} question={currentQuestion} />
+          )}
         </>
       )}
 
@@ -1553,18 +1623,18 @@ export default function App() {
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-3">
-                    <button
-                      onClick={handlePrintCombinedPaper}
-                      className="px-4 py-2 rounded-full text-sm font-bold bg-white border-2 border-gray-200 text-gray-600 hover:border-secondary hover:text-secondary transition-all"
-                    >
-                      Printable paper + answer sheet
-                    </button>
-                    <button
-                      onClick={handlePrintShortFormPaper}
-                      className="px-4 py-2 rounded-full text-sm font-bold bg-white border-2 border-gray-200 text-gray-600 hover:border-secondary hover:text-secondary transition-all"
-                    >
-                      Short-form paper
-                    </button>
+                  <button
+                    onClick={handlePrintCombinedPaper}
+                    className="px-4 py-2 rounded-full text-sm font-bold bg-white border-2 border-gray-200 text-gray-600 hover:border-secondary hover:text-secondary transition-all"
+                  >
+                    Printable paper + answer sheet
+                  </button>
+                  <button
+                    onClick={handlePrintShortFormPaper}
+                    className="px-4 py-2 rounded-full text-sm font-bold bg-white border-2 border-gray-200 text-gray-600 hover:border-secondary hover:text-secondary transition-all"
+                  >
+                    Short-form paper
+                  </button>
                   {!testSession.completedAt && (
                     <button
                       onClick={handleEndTest}

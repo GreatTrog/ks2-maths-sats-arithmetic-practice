@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Question } from '../../types';
+import FractionComponent from '../Fraction';
 
 interface FractionMultiplication2DigitVisualizerProps {
     question: Question;
@@ -75,7 +76,9 @@ const FractionMultiplication2DigitVisualizer: React.FC<FractionMultiplication2Di
                     {/* Top Labels */}
                     <div className="flex w-full mb-2 text-xl font-bold text-gray-600">
                         <div className="w-[350px] text-center">{mixed.w}</div>
-                        <div className="w-[150px] text-center">{mixed.n}/{mixed.d}</div>
+                        <div className="w-[150px] flex justify-center">
+                            <FractionComponent numerator={mixed.n} denominator={mixed.d} />
+                        </div>
                     </div>
 
                     {/* Rectangles */}
@@ -109,14 +112,14 @@ const FractionMultiplication2DigitVisualizer: React.FC<FractionMultiplication2Di
                             {phase >= 2 && (
                                 <div className="z-10 animation-fade-in text-center p-2 bg-white/80 rounded backdrop-blur-sm shadow-sm m-2">
                                     <div className="text-lg font-bold text-blue-700 mb-1">Area B</div>
-                                    <div className="text-xs md:text-sm text-gray-800">
-                                        {multiplier} × {mixed.n}/{mixed.d}
+                                    <div className="text-xs md:text-sm text-gray-800 flex items-center justify-center gap-1">
+                                        {multiplier} × <FractionComponent numerator={mixed.n} denominator={mixed.d} size="sm" />
                                     </div>
-                                    <div className="text-xs md:text-sm mt-1 border-t border-gray-300 pt-1">
-                                        = {fracNumRes}/{mixed.d}
+                                    <div className="text-xs md:text-sm mt-1 border-t border-gray-300 pt-1 flex items-center justify-center gap-1">
+                                        <span>=</span> <FractionComponent numerator={fracNumRes} denominator={mixed.d} size="sm" />
                                     </div>
-                                    <div className="font-bold text-blue-700 mt-1">
-                                        = {fracMixedStr}
+                                    <div className="font-bold text-blue-700 mt-1 flex items-center justify-center gap-1">
+                                        <span>=</span> {renderTextWithFractions(fracMixedStr)}
                                     </div>
                                 </div>
                             )}
@@ -130,8 +133,8 @@ const FractionMultiplication2DigitVisualizer: React.FC<FractionMultiplication2Di
                             <div className="flex items-center justify-center relative pt-4">
                                 {/* CSS Bracket approximation */}
                                 <div className="absolute top-0 w-full h-4 border-l-2 border-b-2 border-r-2 border-gray-400 rounded-b-lg"></div>
-                                <div className="text-2xl font-bold bg-white px-4 z-10 -mt-3 text-purple-700">
-                                    {wholeRes} + {fracMixedStr} = {question.answer}
+                                <div className="text-2xl font-bold bg-white px-4 z-10 -mt-3 text-purple-700 flex items-center gap-2">
+                                    {wholeRes} + {renderTextWithFractions(fracMixedStr)} = {renderTextWithFractions(question.answer)}
                                 </div>
                             </div>
                         </div>
@@ -141,6 +144,41 @@ const FractionMultiplication2DigitVisualizer: React.FC<FractionMultiplication2Di
 
         </div>
     );
+};
+
+const renderTextWithFractions = (text: string) => {
+    const regex = /(\d+\s+\d+\/\d+)|(\d+\/\d+)/g;
+    const parts = text.split(regex);
+
+    return parts.map((part, i) => {
+        if (!part) return null;
+        if (part.match(regex)) {
+            const mixedMatch = part.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+            if (mixedMatch) {
+                return (
+                    <FractionComponent
+                        key={i}
+                        whole={mixedMatch[1]}
+                        numerator={mixedMatch[2]}
+                        denominator={mixedMatch[3]}
+                        size="inherit"
+                    />
+                );
+            }
+            const fractionMatch = part.match(/^(\d+)\/(\d+)$/);
+            if (fractionMatch) {
+                return (
+                    <FractionComponent
+                        key={i}
+                        numerator={fractionMatch[1]}
+                        denominator={fractionMatch[2]}
+                        size="inherit"
+                    />
+                );
+            }
+        }
+        return <span key={i}>{part}</span>;
+    });
 };
 
 export default FractionMultiplication2DigitVisualizer;

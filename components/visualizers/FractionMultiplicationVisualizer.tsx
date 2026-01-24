@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Question } from '../../types';
+import FractionComponent from '../Fraction';
 
 interface Fraction {
     numerator: number;
@@ -124,7 +125,7 @@ const FractionMultiplicationVisualizer: React.FC<FractionMultiplicationVisualize
     const isOverlapped = animationState !== AnimationState.INITIAL;
 
     return (
-        <div className="relative h-[250px] w-[400px] flex items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden p-4 mx-auto">
+        <div className="relative h-[340px] w-[400px] flex items-center justify-center bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden p-8 mx-auto">
 
             {/* Container for Rectangle 1 (Target) */}
             <div className={`relative transition-all duration-1000 ease-in-out ${isOverlapped ? 'translate-x-0' : '-translate-x-[80px]'}`}>
@@ -133,8 +134,9 @@ const FractionMultiplicationVisualizer: React.FC<FractionMultiplicationVisualize
                     {/* We render the result highlights on top of rect 1 when overlapped */}
                     <g>{resultGrid}</g>
                 </svg>
-                <div className={`absolute -top-6 left-0 w-full text-center text-sm font-bold text-sky-600 transition-opacity duration-300 ${isOverlapped ? 'opacity-0' : 'opacity-100'}`}>
-                    {fraction1.numerator}/{fraction1.denominator} (Vertical)
+                <div className={`absolute -top-20 left-0 w-full flex flex-col items-center text-sm font-bold text-sky-600 transition-opacity duration-300 ${isOverlapped ? 'opacity-0' : 'opacity-100'}`}>
+                    <FractionComponent numerator={fraction1.numerator} denominator={fraction1.denominator} size="sm" />
+                    <span>(Vertical)</span>
                 </div>
             </div>
 
@@ -174,8 +176,9 @@ const FractionMultiplicationVisualizer: React.FC<FractionMultiplicationVisualize
                     ))}
 
                 </svg>
-                <div className={`absolute -bottom-8 left-0 w-full text-center text-sm font-bold text-rose-500 transition-opacity duration-300 ${isOverlapped ? 'opacity-0' : 'opacity-100'}`}>
-                    {fraction2.numerator}/{fraction2.denominator} (Horizontal)
+                <div className={`absolute -bottom-20 left-0 w-full flex flex-col items-center text-sm font-bold text-rose-500 transition-opacity duration-300 ${isOverlapped ? 'opacity-0' : 'opacity-100'}`}>
+                    <FractionComponent numerator={fraction2.numerator} denominator={fraction2.denominator} size="sm" />
+                    <span>(Horizontal)</span>
                 </div>
             </div>
 

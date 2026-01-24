@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Question } from '../../types';
+import FractionComponent from '../Fraction';
 
 interface FractionDivisionVisualizerProps {
     question: Question;
@@ -65,14 +66,19 @@ const FractionDivisionVisualizer: React.FC<FractionDivisionVisualizerProps> = ({
     const finalN = isMult ? (fraction.n / divisor) : fraction.n;
 
     return (
-        <div className="flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-inner min-h-[300px] w-[600px]">
-            <div className="text-gray-500 mb-6 font-medium uppercase tracking-widest text-xs">Fraction Division Visualisation</div>
+        <div className="flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-inner min-h-[320px] w-[600px]">
+            <div className="text-gray-500 mb-10 font-medium uppercase tracking-widest text-xs">Fraction Division Visualisation</div>
 
             {phase > 0 && (
                 <div className="flex flex-col items-center w-[500px]">
                     {/* Context Text */}
-                    <div className="text-lg font-medium text-gray-700 mb-4 h-8 text-center">
-                        {phase === 1 && `Represent ${fraction.n}/${fraction.d}`}
+                    <div className="text-lg font-medium text-gray-700 mb-4 h-8 flex items-center justify-center gap-2">
+                        {phase === 1 && (
+                            <>
+                                <span>Represent</span>
+                                <FractionComponent numerator={fraction.n} denominator={fraction.d} />
+                            </>
+                        )}
                         {phase === 2 && `Split each part vertically into ${divisor} smaller pieces`}
                         {phase >= 3 && `Share ${shadedParts} pieces into ${divisor} groups`}
                     </div>
@@ -145,9 +151,9 @@ const FractionDivisionVisualizer: React.FC<FractionDivisionVisualizerProps> = ({
                                 </div>
                             </div>
 
-                            <div className="mt-4 pt-4 border-t border-gray-200 w-full">
-                                <span className="text-lg text-gray-600 mr-2">Answer:</span>
-                                <span className="text-3xl font-bold text-green-700">{finalN}/{totalParts}</span>
+                            <div className="mt-4 pt-4 border-t border-gray-200 w-full flex items-center justify-center gap-3">
+                                <span className="text-lg text-gray-600">Answer:</span>
+                                <FractionComponent numerator={finalN} denominator={totalParts} size="3xl" />
                             </div>
                         </div>
                     )}
@@ -156,8 +162,10 @@ const FractionDivisionVisualizer: React.FC<FractionDivisionVisualizerProps> = ({
             )}
 
             {phase === 0 && (
-                <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-lg text-blue-800 font-medium">Think: {fraction.n}/{fraction.d} shared among {divisor} people.</p>
+                <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200 flex items-center justify-center gap-2">
+                    <span className="text-lg text-blue-800 font-medium whitespace-nowrap">Think: </span>
+                    <FractionComponent numerator={fraction.n} denominator={fraction.d} size="lg" />
+                    <span className="text-lg text-blue-800 font-medium whitespace-nowrap"> shared among {divisor} people.</span>
                 </div>
             )}
 

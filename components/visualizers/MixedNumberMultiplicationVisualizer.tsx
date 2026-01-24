@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Question } from '../../types';
+import FractionComponent from '../Fraction';
 
 interface MixedNumberMultiplicationVisualizerProps {
     question: Question;
@@ -71,33 +72,33 @@ const MixedNumberMultiplicationVisualizer: React.FC<MixedNumberMultiplicationVis
             <div className="flex flex-col items-center p-4 bg-slate-50 rounded-xl border border-slate-200">
                 <div className="font-bold text-slate-500 mb-2">{label}</div>
                 <div className="flex items-center gap-2 mb-2">
-                    <span className="text-2xl font-black text-slate-700">{m.w}</span>
-                    <div className="flex flex-col items-center">
-                        <span className="border-b-2 border-slate-700 font-bold">{m.n}</span>
-                        <span className="font-bold">{m.d}</span>
-                    </div>
+                    <FractionComponent whole={m.w} numerator={m.n} denominator={m.d} size="2xl" />
                 </div>
 
                 {/* Initial Bars: Wholes + Fraction */}
                 <div className="flex gap-2 mb-2">
                     {Array.from({ length: m.w }).map((_, i) => (
-                        <div key={i} className="relative">
+                        <div key={i} className="relative flex flex-col items-center">
                             {/* Whole Bar, animated to split */}
                             {renderBar(m.d, m.d, true)}
-                            <div className="absolute -bottom-4 w-full text-center text-xs text-indigo-600 font-bold">{m.d}/{m.d}</div>
+                            <div className="mt-1">
+                                <FractionComponent numerator={m.d} denominator={m.d} size="sm" />
+                            </div>
                         </div>
                     ))}
-                    <div className="relative">
+                    <div className="relative flex flex-col items-center">
                         {renderBar(m.n, m.d, true)}
-                        <div className="absolute -bottom-4 w-full text-center text-xs text-indigo-600 font-bold">{m.n}/{m.d}</div>
+                        <div className="mt-1">
+                            <FractionComponent numerator={m.n} denominator={m.d} size="sm" />
+                        </div>
                     </div>
                 </div>
 
                 <div className="my-2 text-slate-400">↓</div>
 
                 {/* Result Improper */}
-                <div className="flex flex-col items-center animate-bounce-in">
-                    <div className="text-lg font-bold text-indigo-600">{imp.n}/{imp.d}</div>
+                <div className="flex flex-col items-center animate-bounce-in mt-4">
+                    <FractionComponent numerator={imp.n} denominator={imp.d} size="lg" className="text-indigo-600" />
                 </div>
             </div>
         )
@@ -156,13 +157,13 @@ const MixedNumberMultiplicationVisualizer: React.FC<MixedNumberMultiplicationVis
                     <div className="flex flex-col items-center p-4 bg-slate-50 rounded-xl border border-slate-200">
                         <div className="font-bold text-slate-500 mb-2">Multiplier</div>
                         <div className="flex flex-col items-center mb-2">
-                            <span className="text-2xl font-black text-slate-700">{imp2.n}</span>
-                            <div className="w-full h-1 bg-slate-700 rounded-full"></div>
-                            <span className="text-2xl font-black text-slate-700">{imp2.d}</span>
+                            <FractionComponent numerator={imp2.n} denominator={imp2.d} size="2xl" />
                         </div>
-                        <div className="relative mt-2">
+                        <div className="relative mt-2 flex flex-col items-center">
                             {renderBar(imp2.n, imp2.d, true)}
-                            <div className="absolute -bottom-4 w-full text-center text-xs text-indigo-600 font-bold">{imp2.n}/{imp2.d}</div>
+                            <div className="mt-1">
+                                <FractionComponent numerator={imp2.n} denominator={imp2.d} size="sm" />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -170,33 +171,22 @@ const MixedNumberMultiplicationVisualizer: React.FC<MixedNumberMultiplicationVis
 
             {/* Step 1: Multiplication */}
             {stepIndex === 1 && (
-                <div className="flex flex-col items-center gap-6 animate-fade-in">
-                    <div className="text-xl font-bold text-slate-600 mb-2">Multiply Improper Fractions</div>
+                <div className="flex flex-col items-center gap-10 animate-fade-in">
+                    <div className="text-xl font-bold text-slate-600 mb-6">Multiply Improper Fractions</div>
 
                     <div className="flex items-center gap-4 text-3xl font-mono font-bold text-slate-800">
-                        <div className="flex flex-col items-center">
-                            <span className="text-indigo-600">{imp1.n}</span>
-                            <div className="w-full h-1 bg-slate-800 rounded-full"></div>
-                            <span className="text-slate-600">{imp1.d}</span>
-                        </div>
+                        <FractionComponent numerator={imp1.n} denominator={imp1.d} size="3xl" className="text-indigo-600" />
                         <span>×</span>
-                        <div className="flex flex-col items-center">
-                            <span className="text-indigo-600">{imp2.n}</span>
-                            <div className="w-full h-1 bg-slate-800 rounded-full"></div>
-                            <span className="text-slate-600">{imp2.d}</span>
-                        </div>
+                        <FractionComponent numerator={imp2.n} denominator={imp2.d} size="3xl" className="text-indigo-600" />
                         <span>=</span>
-                        <div className="flex flex-col items-center p-4 bg-green-50 rounded-xl border-2 border-green-200">
-                            {/* Show calculation details? */}
-                            <div className="flex gap-2 text-sm text-green-600 mb-1 opacity-70">
+                        <div className="flex flex-col items-center p-4 bg-green-50 rounded-xl border-2 border-green-200 min-w-[80px]">
+                            <div className="text-sm text-green-600 mb-1 opacity-70">
                                 <span>{imp1.n}×{imp2.n}</span>
                             </div>
 
-                            <span className="text-green-700">{res.n}</span>
-                            <div className="w-full h-1 bg-green-700 rounded-full"></div>
-                            <span className="text-green-700">{res.d}</span>
+                            <FractionComponent numerator={res.n} denominator={res.d} size="3xl" className="text-green-700" />
 
-                            <div className="flex gap-2 text-sm text-green-600 mt-1 opacity-70">
+                            <div className="text-sm text-green-600 mt-1 opacity-70">
                                 <span>{imp1.d}×{imp2.d}</span>
                             </div>
                         </div>
@@ -206,8 +196,8 @@ const MixedNumberMultiplicationVisualizer: React.FC<MixedNumberMultiplicationVis
 
             {/* Step 2: Reversion */}
             {stepIndex >= 2 && (
-                <div className="flex flex-col items-center gap-6 w-full animate-fade-in">
-                    <div className="text-lg font-bold text-slate-600">
+                <div className="flex flex-col items-center gap-10 w-full animate-fade-in">
+                    <div className="text-lg font-bold text-slate-600 mb-4">
                         {res.n} ÷ {res.d} = ?
                     </div>
 
@@ -218,17 +208,9 @@ const MixedNumberMultiplicationVisualizer: React.FC<MixedNumberMultiplicationVis
 
                     {/* Final Equation */}
                     <div className="mt-4 p-4 bg-yellow-50 rounded-xl border-2 border-yellow-200 flex items-center gap-4 animate-bounce-in">
-                        <div className="flex flex-col items-center">
-                            <span className="text-xl font-bold text-slate-500">{res.n}/{res.d}</span>
-                        </div>
+                        <FractionComponent numerator={res.n} denominator={res.d} size="xl" />
                         <span className="text-2xl font-bold text-slate-400">=</span>
-                        <div className="text-3xl font-black text-slate-800 flex items-center gap-2">
-                            <span>{final.w}</span>
-                            <div className="flex flex-col items-center text-xl">
-                                <span className="border-b-2 border-slate-800">{final.n}</span>
-                                <span>{final.d}</span>
-                            </div>
-                        </div>
+                        <FractionComponent whole={final.w} numerator={final.n} denominator={final.d} size="3xl" />
                     </div>
                 </div>
             )}

@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Question } from '../../types';
+import FractionComponent from '../Fraction';
 
 interface FractionSubtractionVisualizerProps {
     question: Question;
@@ -214,24 +215,10 @@ const FractionSubtractionVisualizer: React.FC<FractionSubtractionVisualizerProps
     const resW = v1Borrowed.w - v2.w;
 
     // Render Helpers
-    const Fraction = ({ w, n, d, className, crossedOut, highlight }: { w: number, n: number, d: number, className?: string, crossedOut?: boolean, highlight?: boolean }) => (
-        <div className={`flex items-center gap-1 font-mono text-xl md:text-2xl ${className} ${crossedOut ? 'opacity-50 relative' : ''}`}>
-            {crossedOut && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-full h-1 bg-red-500 transform -rotate-12 rounded-full"></div>
-                </div>
-            )}
-            <span className={`${highlight ? 'text-primary font-bold scale-110 transition-transform' : ''}`}>{w > 0 ? w : ''}</span>
-            <div className={`flex flex-col items-center leading-none mx-1 ${highlight ? 'text-primary font-bold transition-transform' : ''}`}>
-                <span className="border-b-2 border-current pb-0.5">{n}</span>
-                <span className="pt-0.5">{d}</span>
-            </div>
-        </div>
-    );
 
     return (
-        <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl shadow-inner min-h-[200px]">
-            <div className="text-gray-500 mb-6 font-medium uppercase tracking-widest text-xs">Visualisation</div>
+        <div className="flex flex-col items-center justify-center p-8 bg-white rounded-xl shadow-inner min-h-[220px]">
+            <div className="text-gray-500 mb-10 font-medium uppercase tracking-widest text-xs">Visualisation</div>
 
             {/* Container for the calculation */}
             <div className="flex items-center gap-4 md:gap-8">
@@ -247,15 +234,21 @@ const FractionSubtractionVisualizer: React.FC<FractionSubtractionVisualizerProps
                         <div className="flex flex-col items-center animation-fade-in-up">
                             {/* The crossed out original */}
                             <div className="relative mb-2">
-                                <Fraction w={v1.w} n={v1.n} d={v1.d} crossedOut={true} />
+                                <FractionComponent whole={v1.w} numerator={v1.n} denominator={v1.d} crossedOut={true} size="xl" />
                                 {/* Arrow or visual cue? */}
                             </div>
                             {/* The new borrowed version */}
-                            <Fraction w={v1Borrowed.w} n={v1Borrowed.n} d={v1Borrowed.d} highlight={true} />
+                            <FractionComponent whole={v1Borrowed.w} numerator={v1Borrowed.n} denominator={v1Borrowed.d} highlight={true} size="xl" />
                         </div>
                     ) : (
                         <div className="relative">
-                            <Fraction w={v1.w} n={v1.n} d={v1.d} highlight={phase >= 1 && needsCommonDenom && phase < 2} />
+                            <FractionComponent
+                                whole={v1.w}
+                                numerator={v1.n}
+                                denominator={v1.d}
+                                highlight={phase >= 1 && needsCommonDenom && phase < 2}
+                                size="xl"
+                            />
                             {phase === 1 && conversionStage === 1 && needsCommonDenom && (
                                 <div className="absolute top-0 -right-8 flex flex-col text-xs text-blue-500 font-bold bg-blue-100 p-1 rounded animate-pulse z-10">
                                     <span>×{Math.round(commonD / m1!.d)}</span>
@@ -272,7 +265,13 @@ const FractionSubtractionVisualizer: React.FC<FractionSubtractionVisualizerProps
                 {/* Right Side (Second Number) */}
                 <div>
                     <div className="relative">
-                        <Fraction w={v2.w} n={v2.n} d={v2.d} highlight={phase >= 1 && needsCommonDenom && phase < 2} />
+                        <FractionComponent
+                            whole={v2.w}
+                            numerator={v2.n}
+                            denominator={v2.d}
+                            highlight={phase >= 1 && needsCommonDenom && phase < 2}
+                            size="xl"
+                        />
                         {phase === 1 && conversionStage === 1 && needsCommonDenom && (
                             <div className="absolute top-0 -right-8 flex flex-col text-xs text-blue-500 font-bold bg-blue-100 p-1 rounded animate-pulse z-10">
                                 <span>×{Math.round(commonD / m2!.d)}</span>
@@ -289,15 +288,12 @@ const FractionSubtractionVisualizer: React.FC<FractionSubtractionVisualizerProps
                 {phase >= 3 ? (
                     <div className="animation-fade-in">
                         <div className="flex items-center gap-1 font-mono text-xl md:text-2xl text-blue-600 font-bold">
-                            {/* Wholes calculated? */}
-                            <span>{resW > 0 || (resW === 0 && resN === 0) ? resW : ''}</span>
-                            {/* Fractions calculated? */}
-                            {(resN > 0 || (resW === 0 && resN === 0)) && (
-                                <div className="flex flex-col items-center leading-none mx-1">
-                                    <span className="border-b-2 border-current pb-0.5">{resN}</span>
-                                    <span className="pt-0.5">{v1Borrowed.d}</span>
-                                </div>
-                            )}
+                            <FractionComponent
+                                whole={resW > 0 || (resW === 0 && resN === 0) ? (resW === 0 && resN === 0 ? "0" : resW) : ""}
+                                numerator={resN > 0 || (resW === 0 && resN === 0) ? resN : ""}
+                                denominator={resN > 0 || (resW === 0 && resN === 0) ? v1Borrowed.d : ""}
+                                size="xl"
+                            />
                         </div>
                     </div>
                 ) : (
@@ -323,6 +319,41 @@ const FractionSubtractionVisualizer: React.FC<FractionSubtractionVisualizerProps
 
         </div>
     );
+};
+
+const renderTextWithFractions = (text: string) => {
+    const regex = /(\d+\s+\d+\/\d+)|(\d+\/\d+)/g;
+    const parts = text.split(regex);
+
+    return parts.map((part, i) => {
+        if (!part) return null;
+        if (part.match(regex)) {
+            const mixedMatch = part.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+            if (mixedMatch) {
+                return (
+                    <FractionComponent
+                        key={i}
+                        whole={mixedMatch[1]}
+                        numerator={mixedMatch[2]}
+                        denominator={mixedMatch[3]}
+                        size="inherit"
+                    />
+                );
+            }
+            const fractionMatch = part.match(/^(\d+)\/(\d+)$/);
+            if (fractionMatch) {
+                return (
+                    <FractionComponent
+                        key={i}
+                        numerator={fractionMatch[1]}
+                        denominator={fractionMatch[2]}
+                        size="inherit"
+                    />
+                );
+            }
+        }
+        return <span key={i}>{part}</span>;
+    });
 };
 
 export default FractionSubtractionVisualizer;
