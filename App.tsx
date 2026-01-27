@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Question, QuestionType, TestQuestion, TestQuestionMark, TestQuestionResponse, TestResponseEntry, TestSession } from './types';
 import { generateQuestionByType, generateNewQuestion } from './services/questionService';
-import { generateTestPaper, TEST_PAPER_VERSION } from './services/testPaperService';
+import { generateTestPaper, TEST_PAPER_VERSION, generatePupilAlias } from './services/testPaperService';
+import { generateWeeklyPractice, buildWeeklyPracticeHtml } from './services/practiceGeneratorService';
 import { getBakedExplanation } from './services/explanationService';
 import AdditionVisualizer from './components/visualizers/AdditionVisualizer';
 import SubtractionVisualizer from './components/visualizers/SubtractionVisualizer';
@@ -671,7 +672,7 @@ const buildTestPaperHtml = (session: TestSession) => {
     <div class="header">
       <div>
         <div class="title">KS2 Arithmetic Practice Test</div>
-        <div class="meta">Name: ____________________________</div>
+        <div class="meta">Pupil: <strong>${session.pupilAlias || '____________________________'}</strong></div>
       </div>
       <div class="meta">Date: ${formatDate()}</div>
     </div>
@@ -757,7 +758,7 @@ const buildShortFormPaperHtml = (session: TestSession) => {
     <div class="header">
       <div>
         <div class="title">KS2 Arithmetic Short Form</div>
-        <div class="meta">Name: ____________________________</div>
+        <div class="meta">Pupil: <strong>${session.pupilAlias || '____________________________'}</strong></div>
       </div>
       <div class="meta">Date: ${formatDate()}</div>
     </div>
@@ -815,7 +816,7 @@ const buildSummaryHtml = (session: TestSession) => {
     <div class="header">
       <div>
         <div class="title">Practice Test Summary</div>
-        <div class="meta">Name: ____________________________</div>
+        <div class="meta">Pupil: <strong>${session.pupilAlias || '____________________________'}</strong></div>
         <div class="meta">Date: ${formatDate()}</div>
       </div>
       <div class="meta">
@@ -1083,6 +1084,7 @@ export default function App() {
       marks: null,
       totalMarksAwarded: null,
       completedAt: null,
+      pupilAlias: generatePupilAlias(),
     };
     setTestSession(session);
     setTestCurrentIndex(0);
@@ -1288,14 +1290,17 @@ export default function App() {
 
   const activeTestQuestion = testSession?.questions[testCurrentIndex] ?? null;
   const activeTestMark = testSession?.marks?.find((mark) => mark.questionId === activeTestQuestion?.questionId);
-  const workingOutQuestion = mode === 'test' && activeTestQuestion
-    ? {
-      type: activeTestQuestion.type,
-      text: activeTestQuestion.prompt,
-      answer: activeTestQuestion.correctAnswer,
-      bidmasMetadata: activeTestQuestion.bidmasMetadata,
+  const workingOutQuestion = useMemo(() => {
+    if (mode === 'test' && activeTestQuestion) {
+      return {
+        type: activeTestQuestion.type,
+        text: activeTestQuestion.prompt,
+        answer: activeTestQuestion.correctAnswer,
+        bidmasMetadata: activeTestQuestion.bidmasMetadata,
+      };
     }
-    : currentQuestion;
+    return currentQuestion;
+  }, [mode, activeTestQuestion, currentQuestion]);
 
   const handleTestAnswerChange = (value: string) => {
     setTestAnswerInput(value);
@@ -1362,6 +1367,13 @@ export default function App() {
   const handlePrintShortFormPaper = () => {
     const session = testSession ?? createPrintableSession(generateTestPaper());
     openPrintWindow('KS2 Arithmetic Short Form', buildShortFormPaperHtml(session));
+  };
+
+  const handlePrintWeeklyPractice = () => {
+    if (!testSession || !testSession.completedAt) return;
+    const practice = generateWeeklyPractice(testSession);
+    const html = buildWeeklyPracticeHtml(practice);
+    openPrintWindow('Weekly Arithmetic Practice', html);
   };
 
   const handlePrintSummary = () => {
@@ -1620,6 +1632,9 @@ export default function App() {
                     <div className={`text-3xl font-black ${testSecondsRemaining <= 300 && !testSession.completedAt ? 'text-red-500' : 'text-secondary'}`}>
                       {formatCountdown(testSecondsRemaining)}
                     </div>
+                    <div className="mt-2 text-xl font-black text-amber-600 uppercase tracking-tight">
+                      {testSession.pupilAlias}
+                    </div>
                   </div>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-3">
@@ -1659,12 +1674,20 @@ export default function App() {
                       <h3 className="text-xl font-bold text-green-600">Test complete</h3>
                       <p className="text-gray-600">Score: {testSession.totalMarksAwarded ?? 0} / 40</p>
                     </div>
-                    <button
-                      onClick={handlePrintSummary}
-                      className="px-5 py-3 rounded-xl font-bold bg-green-500 text-white hover:bg-green-600 transition-all"
-                    >
-                      Download summary PDF
-                    </button>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handlePrintWeeklyPractice}
+                        className="px-5 py-3 rounded-xl font-bold bg-amber-500 text-white hover:bg-amber-600 transition-all shadow-lg"
+                      >
+                        Download Weekly Practice
+                      </button>
+                      <button
+                        onClick={handlePrintSummary}
+                        className="px-5 py-3 rounded-xl font-bold bg-green-500 text-white hover:bg-green-600 transition-all"
+                      >
+                        Download summary PDF
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

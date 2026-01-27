@@ -110,4 +110,5 @@ export type TestSession = {
   marks: TestQuestionMark[] | null;
   totalMarksAwarded: number | null;
   completedAt: string | null;
+  pupilAlias?: string;
 };

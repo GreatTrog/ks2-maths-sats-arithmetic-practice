@@ -71,7 +71,7 @@ const WorkingOutCanvas: React.FC<WorkingOutCanvasProps> = ({ isVisible, onClose,
             clearCanvas();
             setIsInitialized(false); // Reset initialization for new question
         }
-    }, [question]);
+    }, [question?.text]);
 
     // Update stroke color when selected color changes
     useEffect(() => {
