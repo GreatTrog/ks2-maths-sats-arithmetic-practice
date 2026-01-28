@@ -156,11 +156,12 @@ export const buildWeeklyPracticeHtml = (practice: WeeklyPractice): string => {
     @media print {
       @page { size: A4 landscape; margin: 10mm; }
       body { margin: 0; padding: 0; font-family: sans-serif; }
+      .page-break { page-break-before: always; }
     }
     body { font-family: sans-serif; color: #333; }
     .container { width: 100%; }
-    .header { text-align: center; margin-bottom: 20px; }
-    .header h1 { margin: 0; color: #d97706; }
+    .header { text-align: center; margin-bottom: 15px; }
+    .header h1 { margin: 0; color: #d97706; font-size: 1.8em; }
     .header p { margin: 5px 0; font-size: 0.9em; color: #666; }
     .grid {
       display: grid;
@@ -177,36 +178,65 @@ export const buildWeeklyPracticeHtml = (practice: WeeklyPractice): string => {
       text-align: center;
       background: #fef3c7;
       font-weight: bold;
-      padding: 8px;
+      padding: 5px;
       border-bottom: 2px solid #333;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
     }
     .question-box {
       border: 1px solid #eee;
-      margin-bottom: 15px;
-      padding: 10px;
-      min-height: 80px;
+      margin-bottom: 5px;
+      padding: 5px;
+      min-height: 65px;
       position: relative;
     }
     .q-num {
       font-weight: bold;
       font-size: 0.8em;
       color: #999;
-      margin-bottom: 5px;
+      margin-bottom: 2px;
     }
     .q-text {
-      font-size: 1.1em;
+      font-size: 0.95em;
       font-weight: bold;
       text-align: center;
-      margin: 10px 0;
+      margin: 5px 0;
     }
     .answer-line {
       border-bottom: 1px solid #999;
       width: 60px;
-      height: 20px;
+      height: 15px;
       margin-left: auto;
     }
-    .footer { margin-top: 20px; font-size: 0.8em; text-align: right; color: #999; }
+    .footer { margin-top: 10px; font-size: 0.8em; text-align: right; color: #999; }
+    
+    .answers-container { padding: 20px; }
+    .answers-title { 
+      color: #d97706; 
+      font-size: 1.5em; 
+      margin-bottom: 15px; 
+      border-bottom: 2px solid #d97706;
+      padding-bottom: 5px;
+    }
+    .ans-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 15px;
+    }
+    .ans-day-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+      font-size: 1.1em;
+      color: #333;
+      border-bottom: 1px solid #eee;
+    }
+    .ans-item {
+      margin-bottom: 4px;
+      font-size: 0.9em;
+    }
+    .ans-val {
+      font-weight: bold;
+      color: #b45309;
+    }
   `;
 
   const columnsHtml = practice.days.map(day => `
@@ -222,11 +252,23 @@ export const buildWeeklyPracticeHtml = (practice: WeeklyPractice): string => {
     </div>
   `).join('');
 
+  const answersHtml = practice.days.map(day => `
+    <div class="ans-day-col">
+      <div class="ans-day-title">${day.day}</div>
+      ${day.questions.map((q, i) => `
+        <div class="ans-item">
+          Q${i + 1}: <span class="ans-val">${q.answer}</span>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+
   return `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="utf-8">
+      <title>Weekly Practice - ${practice.pupilAlias || 'Student'}</title>
       <style>${css}</style>
     </head>
     <body>
@@ -240,6 +282,15 @@ export const buildWeeklyPracticeHtml = (practice: WeeklyPractice): string => {
         </div>
         <div class="footer">
           Generated for targeted practice based on recent test results.
+        </div>
+      </div>
+
+      <div class="page-break"></div>
+
+      <div class="answers-container">
+        <h1 class="answers-title">Answer Key - Weekly Practice</h1>
+        <div class="ans-grid">
+          ${answersHtml}
         </div>
       </div>
     </body>
